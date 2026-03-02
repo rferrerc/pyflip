@@ -1,0 +1,9 @@
+astropy==6.1.2
+imageio==2.35.1
+matplotlib==3.9.2
+numpy==2.1.0
+pyklip==2.8
+scipy==1.14.1
+torch==v2.4.0
+torchvision==0.19.0
+tqdm==4.66.5
