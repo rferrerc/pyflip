@@ -36,7 +36,7 @@ Software submission for paper manuscript.
 - Run the following bash command inside a virtual environment with all the dependencies outlined above and with access to an NVIDIA A30 GPU (or equivalent):
 
 ```
-./scripts/run_JWST_test_HIP65426.sh
+./run_JWST_test_HIP65426.sh
 ```
 
 This will run the file `run_FLIP.py`, which contains the code to run the model. The bash file contains the filenames for the demo data included in this folder and the hyperparameters used for the HIP 65426 experiment in the paper submission.

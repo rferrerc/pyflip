@@ -210,14 +210,20 @@ if __name__ == "__main__":
                 pred_planet = torch.mean(torch.cat(pred_planet, 0), 0)
             
             pred_planet_np = pred_planet.cpu().numpy()
-
+            print('injected companion flux is ', injected_companion['flux'])
+            print('np.nanmax(pred_planet_np) flux is ', np.nanmax(pred_planet_np))
             # Planet injected at the right position, now we set its brightness
             # injected_companion['flux'] is calculated in generate_positions_sigma() in terms of N times above the Poisson noise limit, 
             # but that is the number required AFTER low pass filtering with sigma=1 px
             # So here, we compute what flux of the pre-smoothed planet, so that after the same low pass filter it results in the desired flux
             smoothed_injected = nan_gaussian_filter(pred_planet_np, 1) # smooth injection with sigma=1 pixel
+            
+            print('np.nanmax(smoothed_injected) flux is ', np.nanmax(smoothed_injected))
+            normaltosmooth = np.nanmax(pred_planet_np) / np.nanmax(smoothed_injected)
             smoothed_conversiontorequiredflux = np.nanmax(smoothed_injected) * injected_companion['flux'] # Dividing the smoothed planet by this number gives the correct flux
-            curr_pred_planet_scaled = pred_planet_np /smoothed_conversiontorequiredflux # So we divide the pre-smoothed planet by the same flux conversion factor
+            print('smoothed_conversiontorequiredflux flux is ', smoothed_conversiontorequiredflux)
+            curr_pred_planet_scaled = pred_planet_np / np.nanmax(pred_planet_np) * injected_companion['flux'] * normaltosmooth# So we divide the pre-smoothed planet by the same flux conversion factor
+            print('np.nanmax(curr_pred_planet_scaled) flux is ', np.nanmax(curr_pred_planet_scaled))
             curr_pred_planet_scaled = curr_pred_planet_scaled[None]
             injected_planets.append(curr_pred_planet_scaled)
             original_injected_peaks.append(np.nanmax(curr_pred_planet_scaled))
@@ -745,7 +751,7 @@ if __name__ == "__main__":
                     if args.sci_targ_name == 'HIP65426':
                         if args.sci_targ_name == 'HIP65426': # Known position of HIP 65426 b
                             x_pos, y_pos = -7.2 * psf_pixel_scale_arcsec, 11 * psf_pixel_scale_arcsec # hand tuned for HIP 65426 in the pre-rotated frame
-                            sourcemaskrad =1.0
+                            sourcemaskrad =1.3
                         residual = np.squeeze(residual)
                         if residual.ndim == 2:
                             myres = residual
@@ -785,6 +791,10 @@ if __name__ == "__main__":
                     curr_snr, _, _ = calc_snr(curr_frame_masked*px_mask_nanned, injected_companion['pos_x_px']*psf_pixel_scale_arcsec, injected_companion['pos_y_px']*psf_pixel_scale_arcsec,0.3,np.sqrt(injected_companion['pos_x_px']**2 + injected_companion['pos_y_px']**2)*psf_pixel_scale_arcsec, blur_annulus=args.blur_annulus_SNR, blur_before_signal=args.blur_before_signal, sigma_kernel=1)
                     curr_iter_snrs.append(curr_snr)
                     curr_iter_signal_blob_peak.append(peak_blob)
+                    if args.sci_targ_name == 'HIP65426':
+                        _, hip_annulus, hip_signal_blob = calc_snr(myres*px_mask_nanned, x_pos, y_pos,sourcemaskrad,np.sqrt(x_pos**2 + y_pos**2),width=0.5, blur_annulus=args.blur_annulus_SNR, blur_before_signal=args.blur_before_signal)
+                        hip_curr_snr, _, _ = calc_snr(myres*px_mask_nanned, x_pos, y_pos,sourcemaskrad,np.sqrt(x_pos**2 + y_pos**2),width=0.5, blur_annulus=args.blur_annulus_SNR, blur_before_signal=args.blur_before_signal, sigma_kernel=1)
+                        hip65426_snr.append(hip_curr_snr)
 
                     if i%300 == 0:
                         plt.figure(figsize=[15,10])
@@ -874,11 +884,13 @@ if __name__ == "__main__":
         # Save results for the planet injection every certian number of iterations; useful to define a stopping condition afterwards
         sci_injected_peaks = np.array(sci_injected_peaks)
         sci_signal_loss = np.array(sci_signal_loss)
+        hip65426_snr = np.array(hip65426_snr)
         sci_snr = np.array(sci_snr)
         sci_iters = np.array(sci_iters)
 
         np.save(os.path.join(vis_dir_iterations, 'sci_injected_peaks_postsub.npy'), sci_injected_peaks)
         np.save(os.path.join(vis_dir_iterations, 'sci_injected_signal_loss.npy'), sci_signal_loss)
+        np.save(os.path.join(vis_dir_iterations, 'realtarget_snr.npy'), hip65426_snr)
         np.save(os.path.join(vis_dir_iterations, 'sci_injected_snr.npy'), sci_snr)
         np.save(os.path.join(vis_dir_iterations, 'sci_iters.npy'), sci_iters)
 

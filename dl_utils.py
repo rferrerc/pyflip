@@ -538,7 +538,7 @@ def circular_mask(im, peak_x,peak_y, rad_to_mask, value_to_mask, mask_inside=Tru
 #     circlito = np.where(((mesh[0] - peakpix_x)**2 + (mesh[1]-peakpix_y)**2 < rad**2), im, np.nan)
 #     return circlito
 
-def calc_snr(im, offset_x,offset_y, rad_blob, rad_ann, width=0.3, blur_before_signal=False, blur_annulus=True, sigma_kernel=0.0,return_signal_peak=False):
+def calc_snr(im, offset_x,offset_y, rad_blob, rad_ann, width=0.2, blur_before_signal=False, blur_annulus=True, sigma_kernel=0.0,return_signal_peak=False):
     psf_pixel_scale = 0.062424185
     if not blur_annulus:
         positive_blob = circular_mask(im, offset_x,offset_y, rad_blob, np.nan, mask_inside=False)
