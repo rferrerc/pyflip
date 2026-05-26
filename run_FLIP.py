@@ -210,20 +210,15 @@ if __name__ == "__main__":
                 pred_planet = torch.mean(torch.cat(pred_planet, 0), 0)
             
             pred_planet_np = pred_planet.cpu().numpy()
-            print('injected companion flux is ', injected_companion['flux'])
-            print('np.nanmax(pred_planet_np) flux is ', np.nanmax(pred_planet_np))
             # Planet injected at the right position, now we set its brightness
             # injected_companion['flux'] is calculated in generate_positions_sigma() in terms of N times above the Poisson noise limit, 
             # but that is the number required AFTER low pass filtering with sigma=1 px
             # So here, we compute what flux of the pre-smoothed planet, so that after the same low pass filter it results in the desired flux
             smoothed_injected = nan_gaussian_filter(pred_planet_np, 1) # smooth injection with sigma=1 pixel
             
-            print('np.nanmax(smoothed_injected) flux is ', np.nanmax(smoothed_injected))
             normaltosmooth = np.nanmax(pred_planet_np) / np.nanmax(smoothed_injected)
             smoothed_conversiontorequiredflux = np.nanmax(smoothed_injected) * injected_companion['flux'] # Dividing the smoothed planet by this number gives the correct flux
-            print('smoothed_conversiontorequiredflux flux is ', smoothed_conversiontorequiredflux)
             curr_pred_planet_scaled = pred_planet_np / np.nanmax(pred_planet_np) * injected_companion['flux'] * normaltosmooth# So we divide the pre-smoothed planet by the same flux conversion factor
-            print('np.nanmax(curr_pred_planet_scaled) flux is ', np.nanmax(curr_pred_planet_scaled))
             curr_pred_planet_scaled = curr_pred_planet_scaled[None]
             injected_planets.append(curr_pred_planet_scaled)
             original_injected_peaks.append(np.nanmax(curr_pred_planet_scaled))
