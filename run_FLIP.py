@@ -91,7 +91,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Set up physical model for the observation being optimized on: load mask designs, known aberrations, etc.
-    DEVICE = 'cuda'
+    DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     wf_npix = 1024
     diameter = 6.603464
     psf_npix = args.num_det_px
@@ -507,15 +507,7 @@ if __name__ == "__main__":
         optimizer.zero_grad()
 
         # Forward model PSF with current parameters
-        if i == args.iters:
-            pred_1 = []
-            for j in range(len(prop_models)):
-                res, wf = prop_models[j](wavefronts_list1, wfe_batch_list[j], wlen_weights[1], wlen_weights[0])
-                pred_1.append(res)
-                wfnumpy = wf[0].detach().cpu().numpy()
-                np.save(f'{vis_dir}/last_iteration_TOTALWAVEFRONT_oversample_{args.oversample}_wl_sampling_{args.num_wl}.npy',wfnumpy)
-        else:
-            pred_1 = [prop_models[j](wavefronts_list1, wfe_batch_list[j], wlen_weights[1], wlen_weights[0]) for j in range(len(prop_models))]
+        pred_1 = [prop_models[j](wavefronts_list1, wfe_batch_list[j], wlen_weights[1], wlen_weights[0]) for j in range(len(prop_models))]
         pred_1 = torch.mean(torch.cat(pred_1, 0), 0)[None]
 
         if not args.no_median:
@@ -824,7 +816,7 @@ if __name__ == "__main__":
                     sci_iters.append(i)
 
         # Save some progress
-        if i == args.forced_stop_iter or i%500 == 0:
+        if i == args.forced_stop_iter or i%3000 == 0:
             if i > cutoff_iter:
                 progress_arr_target.append(est_residual_obs[0].cpu().numpy())
                 if args.inject_all_in_same_frame:
@@ -847,7 +839,7 @@ if __name__ == "__main__":
             with torch.no_grad():
                 result= prop_models[0].lyot_shifts(prop_models[0].lyot)
                 lyot_arr.append(result.detach().cpu())
-        if i == args.forced_stop_iter or i%500 == 0:
+        if i == args.forced_stop_iter or i%3000 == 0:
             opd_vis_offset_arr.append(prop_models[0].wfe_offsets.get_res().squeeze().detach().cpu())
             
             angles_offset_res.append(prop_models[0].angle_offsets().squeeze().detach().cpu())

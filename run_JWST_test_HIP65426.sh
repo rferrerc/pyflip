@@ -3,7 +3,7 @@ CUDA_VISIBLE_DEVICES=0 python run_FLIP.py \
         --measurement_file HIP65426/demo_data/HIP-65426/full_im/target_002_00001COADDALL.npy  \
         --reference_file HIP65426/demo_data/HIP-68245/full_im/reference_001_00001COADDALL.npy \
         --opd_filename observation_opd.npy \
-        --scene_name DEMO2_30newSNR2final \
+        --scene_name DEMO \
         --stage_fit_flat_fields_start_iter 3500 \
         --stage_fit_flat_fields_end_iter 5500 \
         --px_mask_file HIP65426/model_setup/pixel_masks/pixel_masks.npy \
