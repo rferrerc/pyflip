@@ -5,6 +5,7 @@ import numpy as np
 import math 
 from dl_utils import pixel_coords, crop_to, partial_MFT,shift_image_subpixel
 from model_classes import ShiftModule, GridOffsetModule,FlatFieldingModule,PerMirrorZernikes, OPDOffsetModule, FluxOffsetModule,AngleOffsetModule,LinearInterpOPD,PTT_OPD,LearnableGaussianBlur
+from refactoring.optical_elements import DiffImageOptic, DiffLyotOptic
 
 
 
@@ -194,7 +195,18 @@ class BroadbandWavefront(nn.Module):
         return new_phasor
 
 class PointPropagate(nn.Module):
-    def __init__(self, aperture, lyot, fpm, nircam_opd, args,oversample=None, use_ptt = None,OTE_wfe_basis=None,second_delta_wfe=None, num_det_px = 80):
+    """Original optical pipeline with optional axial mask displacement.
+
+    Parameters
+    ----------
+    fpm_axial_offset, lyot_axial_offset : torch.nn.Parameter, optional
+        Shared fitted displacements [primary-equivalent m]. None keeps the
+        corresponding mask in its nominal plane.
+    focal_length : float
+        Equivalent focal length [m] used for FPM displacement.
+    """
+    def __init__(self, aperture, lyot, fpm, nircam_opd, args,oversample=None, use_ptt = None,OTE_wfe_basis=None,second_delta_wfe=None, num_det_px = 80,
+                 fpm_axial_offset=None, lyot_axial_offset=None, focal_length=131.4):
         super().__init__()
         self.aperture = aperture
         self.lyot = lyot
@@ -204,6 +216,16 @@ class PointPropagate(nn.Module):
         if oversample is None:
             oversample = 1
         self.oversample = oversample
+
+        self.fpm_optic = None
+        self.lyot_optic = None
+        if fpm_axial_offset is not None or lyot_axial_offset is not None:
+            if fpm_axial_offset is not None and focal_length <= 0:
+                raise ValueError('FPM displacement requires a positive equivalent focal length')
+            self.fpm_optic = DiffImageOptic(amplitude=fpm, focal_length=focal_length)
+            self.lyot_optic = DiffLyotOptic(amplitude=lyot, wfe_offsets=nn.Identity())
+            self.fpm_optic.axial_offset = fpm_axial_offset
+            self.lyot_optic.axial_offset = lyot_axial_offset
 
         self.lyot_shifts = ShiftModule(lyot.shape[-2], lyot.shape[-1])
         self.fpm_shifts = ShiftModule(fpm.shape[-2], fpm.shape[-1])
@@ -240,8 +262,19 @@ class PointPropagate(nn.Module):
 
     def propagate_masks(self, phasors, wavefront):
         """Apply the focal plane mask and Lyot stop to the pupil field."""
-        focal_return = wavefront.forward_fpm(phasors, self.fpm, oversample=self.oversample)
-        return wavefront.forward(focal_return, self.lyot_shifts(self.lyot))
+        if self.fpm_optic is None:
+            focal_return = wavefront.forward_fpm(phasors, self.fpm, oversample=self.oversample)
+            return wavefront.forward(focal_return, self.lyot_shifts(self.lyot))
+        self.fpm_optic.amplitude = self.fpm
+        full_pupil = self.lyot_optic.axial_offset is not None
+        returned = self.fpm_optic(phasors, wavefront.npixels, self.oversample,
+                                  wavelengths=wavefront.wavelengths, d_pupil=wavefront.pixel_scale,
+                                  crop_output=not full_pupil)
+        transmission = self.lyot_shifts(self.lyot)
+        if full_pupil:
+            self.lyot_optic.amplitude = transmission
+            return self.lyot_optic.displaced_stop(returned, wavefront.wavelengths, wavefront.pixel_scale)
+        return wavefront.forward(returned, transmission)
 
     # making changes here
     def forward(self, broadbandwavefront, wfe,wavelengths, wl_weights):

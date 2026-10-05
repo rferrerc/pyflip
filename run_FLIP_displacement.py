@@ -34,8 +34,7 @@ from dl_utils import arcsec2rad,calc_snr, circular_mask, merge_injected_planets,
 
 from model_classes import PerMirrorZernikes, OPDOffsetModule, LinearInterpOPD,PTT_OPD,ZernikeBasis,ZernikeModel
 
-from propagation_classes import Wavefront,BroadbandWavefront
-from propagation_classes_displacement import DisplacementPropagate as PointPropagate
+from propagation_classes import Wavefront,BroadbandWavefront,PointPropagate
 
 
 if __name__ == "__main__":
@@ -109,7 +108,8 @@ if __name__ == "__main__":
     # Set up physical model for the observation being optimized on: load mask designs, known aberrations, etc.
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     axial_offset = nn.Parameter(torch.tensor(args.offset, dtype=torch.float64, device=DEVICE))
-    geometry = dict(element=args.element, axial_offset=axial_offset, focal_length=args.focal_length)
+    geometry = dict(focal_length=args.focal_length)
+    geometry[f'{args.element}_axial_offset'] = axial_offset
     wf_npix = 1024
     diameter = 6.603464
     psf_npix = args.num_det_px
