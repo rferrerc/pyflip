@@ -111,6 +111,7 @@ class DiffLyotOptic(DiffPupilOptic):
         Uses the same field and sampling arguments as forward, without applying
         an OPD. The output is cropped to the stop array size.
         """
+        phasors = phasors.to(torch.complex128)
         if d_pupil is None:
             raise ValueError('axial Lyot displacement requires d_pupil')
         n_stop = self.amplitude.shape[-1]
@@ -153,6 +154,8 @@ class DiffImageOptic(DiffOpticalElement):
         # TODO: be more elegant about this, if it does not compromise speed.
 
         # Propagate wavefront to image plane. TODO: only transform if needed
+        if self.axial_offset is not None:
+            phasor = phasor.to(torch.complex128)
         if oversample > 1:
             _npixels = (npixels_in * (oversample - 1)) // 2
             phasor = torch.nn.functional.pad(phasor, (_npixels, ) * 4)
@@ -197,6 +200,7 @@ class DiffImageOptic(DiffOpticalElement):
         equivalent optical system. Propagation uses the transfer function
         method, including at zero displacement.
         """
+        phasors = phasors.to(torch.complex128)
         n = phasors.shape[-1]
         if n % 2:
             raise ValueError('axial masks currently require an even focal grid')

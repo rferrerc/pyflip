@@ -64,8 +64,6 @@ class FresnelTransfer(Fresnel):
             Propagated field with the same shape and sampling as the input.
         """
         n = field.shape[-1]
-        if field.shape[-2] != n or not field.is_complex():
-            raise ValueError('field must be a square complex array')
         freq = torch.fft.fftfreq(n, device=field.device, dtype=torch.float64) / self.d_in
         freq = freq + self.frequency_offset
         transfer_function = torch.exp(
@@ -122,8 +120,6 @@ class FresnelSingle(Fresnel):
         n_in = field.shape[-1]
         n_out = n_in if self.n_out is None else self.n_out
         transform = self.transform
-        if field.shape[-2] != n_in or not field.is_complex():
-            raise ValueError('field must be a square complex array')
         if float(z.detach() if torch.is_tensor(z) else z) == 0:
             raise ValueError('single-transform Fresnel diffraction requires nonzero z')
         n_fft = self.wavelength * z / (self.d_in * self.d_out)

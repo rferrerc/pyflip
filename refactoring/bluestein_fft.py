@@ -51,10 +51,6 @@ def bluestein_fft(field, n_out, n_fft, inverse=False):
     and recalculated when gradients through the sampling are required.
     """
     n_in = field.shape[-1]
-    if field.shape[-2] != n_in or not field.is_complex():
-        raise ValueError('field must be a square complex array')
-    if n_out < 1 or float(n_fft.detach() if torch.is_tensor(n_fft) else n_fft) == 0:
-        raise ValueError('n_out must be positive and n_fft nonzero')
     n_fft = n_fft if inverse else -n_fft
     if torch.is_tensor(n_fft) and n_fft.requires_grad:
         chirp_in, chirp_out, h_fft = _chirps(n_in, n_out, n_fft, field.device, field.dtype)
