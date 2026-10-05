@@ -2,7 +2,7 @@ import torch.nn as nn
 import torch
 import numpy as np 
 from model_classes import OPDOffsetModule, LearnableGaussianBlur,FlatFieldingModule, DetSubPixShift
-from dl_utils import crop_to, partial_MFT, shift_image_subpixel
+from propagation import pupil_to_focal, focal_to_pupil, mft_matrices, apply_mft
 
 class DiffOpticalElement(nn.Module):
     def __init__(self, name=None):
@@ -63,18 +63,13 @@ class DiffImageOptic(DiffOpticalElement):
         # TODO: be more elegant about this, if it does not compromise speed.
 
         # Propagate wavefront to image plane. TODO: only transform if needed
-        if oversample > 1:
-            _npixels = (npixels_in * (oversample - 1)) // 2
-            phasor = torch.nn.functional.pad(phasor, (_npixels, ) * 4)
-
-        phasors = torch.fft.fftshift(torch.fft.ifft2(phasor), dim=[-2, -1])
+        phasors = pupil_to_focal(phasor, npixels_in, oversample)
 
         # Apply transmission (e.g., focal plaen mask)
         new_phasor = phasors * self.amplitude
 
         # Back to pupil plane and format. TODO: only transform if needed
-        new_phasor = torch.fft.fft2(torch.fft.fftshift(new_phasor, dim=[-2, -1]))
-        new_phasor = crop_to(new_phasor, npixels_in)
+        new_phasor = focal_to_pupil(new_phasor, npixels_in)
 
         return new_phasor
     
@@ -87,19 +82,12 @@ class DiffDetector(DiffOpticalElement):
         self.oversample = oversample
         self.optic_type = 'detector'
 
-        # Unpack for MFT calculations
-        (npixels, wavelengths, true_pixel_scale, psf_npix, psf_pixel_scale, focal_length, shift, pixel, inverse) = args
-
         self.num_det_px = num_det_px#npixels
 
-        xmats, ymats, mults = [], [], []
-        for i in range(len(wavelengths)):
-            args = (npixels, wavelengths[i].item(), true_pixel_scale, psf_npix*self.oversample, psf_pixel_scale/self.oversample, focal_length, shift, pixel, inverse)
-            x_mat, y_mat, mult = partial_MFT(*args)
-            xmats.append(x_mat); ymats.append(y_mat); mults.append(torch.tensor(mult, dtype=torch.float64))
-        self.x_mat = nn.Parameter(torch.stack(xmats), requires_grad=False).to(device)
-        self.y_mat = nn.Parameter(torch.stack(ymats), requires_grad=False).to(device)
-        self.mult = nn.Parameter(torch.stack(mults), requires_grad=False).to(device)
+        x_mat, y_mat, mult = mft_matrices(*args, oversample=self.oversample)
+        self.x_mat = nn.Parameter(x_mat, requires_grad=False).to(device)
+        self.y_mat = nn.Parameter(y_mat, requires_grad=False).to(device)
+        self.mult = nn.Parameter(mult, requires_grad=False).to(device)
 
         # Extra detector effects
         self.subpixel_shift = DetSubPixShift(shift_x, shift_y)
@@ -120,9 +108,7 @@ class DiffDetector(DiffOpticalElement):
         
         # The phasors do the math; broadbandwavefront provides some attributes
 
-        phasor = (self.y_mat.transpose(-2, -1) @ phasors) @ self.x_mat
-
-        phasor *= self.mult.view(1, 1, -1, 1, 1)
+        phasor = apply_mft(phasors, self.x_mat, self.y_mat, self.mult.view(1, 1, -1, 1, 1))
         w = (broadbandwavefront.peak_flux) ** 0.5
         out = (torch.abs(phasor) * w) ** 2 
 

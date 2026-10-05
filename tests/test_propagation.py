@@ -4,7 +4,9 @@ import torch
 
 from dl_utils import partial_MFT, pixel_coords
 from optical_elements import DiffImageOptic
-from reference_optics import direct_inverse_dft, direct_mft, legacy_focal, legacy_pupil
+from reference_optics import (direct_inverse_dft, direct_mft, legacy_focal,
+                              legacy_pupil, legacy_mft_matrices)
+from propagation import pupil_to_focal, focal_to_pupil, mft_matrices, apply_mft
 
 
 def field(n, dtype=torch.complex128):
@@ -63,3 +65,41 @@ def test_odd_transparent_mask_round_trip():
     incident = field(9)
     actual = DiffImageOptic(amplitude=torch.ones(9, 9))(incident, 9, 1)
     torch.testing.assert_close(actual, incident, rtol=1e-13, atol=1e-14)
+
+
+@pytest.mark.parametrize("n,oversample", [(6, 1), (8, 2), (8, 3)])
+@pytest.mark.parametrize("dtype", [torch.complex64, torch.complex128])
+def test_extracted_fft_fields_and_gradients(n, oversample, dtype):
+    incident = field(n, dtype).requires_grad_(True)
+    original = incident.detach().clone()
+    focal = pupil_to_focal(incident, n, oversample)
+    expected = legacy_focal(incident, n, oversample)
+    torch.testing.assert_close(focal, expected, rtol=0, atol=0)
+    mask = torch.linspace(0.1, 0.9, focal.shape[-1]**2, dtype=focal.real.dtype).reshape(focal.shape[-2:])
+    actual = focal_to_pupil(focal*mask, n)
+    reference = legacy_pupil(expected*mask, n)
+    torch.testing.assert_close(actual, reference, rtol=0, atol=0)
+    grad = torch.autograd.grad(actual.abs().square().sum(), incident)[0]
+    ref_grad = torch.autograd.grad(reference.abs().square().sum(), incident)[0]
+    torch.testing.assert_close(grad, ref_grad, rtol=0, atol=0)
+    torch.testing.assert_close(incident, original, rtol=0, atol=0)
+
+
+@pytest.mark.parametrize("oversample", [1, 2, 3])
+@pytest.mark.parametrize("inverse,focal_length", [(False, None), (True, 131.4)])
+def test_extracted_mft_matrices(oversample, inverse, focal_length):
+    args = (8, torch.tensor([3.9e-6, 4.4e-6], dtype=torch.float64), 6.603464/8,
+            6, 3e-7, focal_length, [0.25, -0.125], True, inverse)
+    actual = mft_matrices(*args, oversample=oversample)
+    expected = legacy_mft_matrices(args, oversample)
+    for a, b in zip(actual, expected):
+        torch.testing.assert_close(a, b, rtol=0, atol=0)
+
+
+def test_extracted_detector_field(optical_case):
+    from reference_optics import legacy_trace
+    c = optical_case
+    reference = legacy_trace(c)
+    x, y, mult = mft_matrices(*c.args, oversample=c.oversample)
+    actual = apply_mft(reference["lyot"], x, y, mult.view(1, 1, -1, 1, 1))
+    torch.testing.assert_close(actual, reference["detector_field"], rtol=0, atol=0)
