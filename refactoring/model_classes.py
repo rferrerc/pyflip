@@ -112,8 +112,8 @@ class GridOffsetModule(nn.Module):
 class FlatFieldingModule(nn.Module):
     def __init__(self, height, width, device='cuda'):
         super().__init__()
-        grid = torch.ones((height, width))
-        self.grid = nn.Parameter(grid[None], requires_grad=True).to(device)
+        grid = torch.ones((height, width), device=device)
+        self.grid = nn.Parameter(grid[None], requires_grad=True)
 
     def get_res(self):
         res = self.grid
@@ -260,8 +260,8 @@ class PerMirrorZernikes(nn.Module):
 class OPDOffsetModule(nn.Module):
     def __init__(self, height, width, device='cuda'):
         super().__init__()
-        grid = torch.zeros((1, height, width))
-        self.grid = nn.Parameter(grid, requires_grad=True).to(device)
+        grid = torch.zeros((1, height, width), device=device)
+        self.grid = nn.Parameter(grid, requires_grad=True)
 
     def get_res(self):
         res = self.grid

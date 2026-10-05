@@ -238,6 +238,11 @@ class PointPropagate(nn.Module):
         self.y_mat = nn.Parameter(torch.stack(ymats), requires_grad=False)
         self.mult = nn.Parameter(torch.stack(mults), requires_grad=False)
 
+    def propagate_masks(self, phasors, wavefront):
+        """Apply the focal plane mask and Lyot stop to the pupil field."""
+        focal_return = wavefront.forward_fpm(phasors, self.fpm, oversample=self.oversample)
+        return wavefront.forward(focal_return, self.lyot_shifts(self.lyot))
+
     # making changes here
     def forward(self, broadbandwavefront, wfe,wavelengths, wl_weights):
         output = None
@@ -248,9 +253,7 @@ class PointPropagate(nn.Module):
         phasors = broadbandwavefront.get_phasors(self.angle_offsets())
         phasors = broadbandwavefront.forward_wfes(phasors, wfe_, broadbandwavefront.wavelengths)
         phasors_ap = broadbandwavefront.forward(phasors, self.aperture, normalize=True)
-        phasors_fpm = broadbandwavefront.forward_fpm(phasors_ap, self.fpm,oversample=self.oversample)
-
-        phasors_lyot = broadbandwavefront.forward(phasors_fpm, self.lyot_shifts(self.lyot))
+        phasors_lyot = self.propagate_masks(phasors_ap, broadbandwavefront)
         phasors_nircam_opd = broadbandwavefront.forward_wfes(phasors_lyot, self.nircam_offsets(self.nircam_opd), broadbandwavefront.wavelengths)
         phasor = (self.y_mat.transpose(-2, -1) @ phasors_nircam_opd) @ self.x_mat
 

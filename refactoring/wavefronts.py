@@ -20,7 +20,7 @@ class BroadbandWavefront(nn.Module):
         self.coordinates = nn.Parameter(pixel_coords(self.npixels, self.diameter), requires_grad=False)
         if angles is None:
             angles = torch.zeros(2)
-        self.angles = nn.Parameter(angles).to(DEVICE)
+        self.angles = nn.Parameter(angles.to(DEVICE))
         if angles_offset is None:
             angles_offset = torch.zeros(2)
         self.angles_offset =angles_offset.to(DEVICE) # Now angles_offset is a property of the wavefront: needs to be on the DEVICE! # TODO: look into this
