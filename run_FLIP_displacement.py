@@ -10,13 +10,13 @@ Free FPM displacement and two free OPD maps do not give a unique geometry fit.
 """
 import os
 import tqdm
-import imageio
 import argparse
 import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib import cm
 import json
 import math
+from util import crop_image, masked_flux
+from util_figures import (save_image, plot_injected_planet, plot_planet_diagnostics,
+                          save_planet_metrics, save_fit_results)
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -201,18 +201,16 @@ if __name__ == "__main__":
 
     
     # Coronagraph is not at the center of the detector data that JWST produces, so use known coronagraph position to crop at the right pixels
-    edge1, edge2 = 160 - int(args.num_det_px/2), 160 + int(args.num_det_px/2)
+    coronagraph_center = (174, 150)  # Detector row and column [pixels]
 
-    shift_y,shift_x = -14, 10
-
-    real_im = np.load(f'{args.reference_file}')[args.ref_which_int, (edge1-shift_y):(edge2-shift_y), (edge1-shift_x):(edge2-shift_x)]
+    real_im = crop_image(np.load(f'{args.reference_file}')[args.ref_which_int], args.num_det_px, center=coronagraph_center)
     real_im = real_im.astype(np.float32)
 
     # Inject synthetic planet to measure SNR and signal loss
     # Simulates a planet at the given brightness and position to inject into real data
     # Can be set to zero flux to track only the SNR of the real planet
     if args.track_injected_planet: 
-        science_noisemap = np.load(f'{args.measurement_noisemap}')[args.sci_which_int, (edge1-shift_y):(edge2-shift_y), (edge1-shift_x):(edge2-shift_x)]
+        science_noisemap = crop_image(np.load(f'{args.measurement_noisemap}')[args.sci_which_int], args.num_det_px, center=coronagraph_center)
         real_im_noisemap = science_noisemap.astype(np.float32)
         posxlist, posylist, fluxeslist = generate_positions_sigma(args.inject_how_many_random, args.inject_how_many_sigma_flux,real_im_noisemap, args.num_det_px,scitargname=args.sci_targ_name,data_dir=args.data_dir, inj_pos=np.array([[args.inj_xpos, args.inj_ypos]]))
         original_injected_peaks = []
@@ -242,14 +240,8 @@ if __name__ == "__main__":
             original_injected_peaks.append(np.nanmax(curr_pred_planet_scaled))
 
             # Save ideal injected planet plot
-            plt.figure(figsize=[5,5])
-
-            plt.imshow(np.squeeze(curr_pred_planet_scaled), origin='lower')
-            plt.title(f'Sum, peak = {np.nansum(curr_pred_planet_scaled):.2f},{np.nanmax(curr_pred_planet_scaled):.2f} (sim planet)')
-
-            plt.tight_layout()
-            plt.savefig(f'{vis_dir}/vis_INJECTEDPLANET_{j}.png')
-            plt.close()
+            plot_injected_planet(curr_pred_planet_scaled,
+                                 f'{vis_dir}/vis_INJECTEDPLANET_{j}.png')
 
         original_injected_peaks = np.array(original_injected_peaks)
 
@@ -264,7 +256,7 @@ if __name__ == "__main__":
         vis_dir_iterations = vis_dir+'/ITERATIONS'
         os.makedirs(vis_dir_iterations, exist_ok=True)
 
-    plt.imsave(f'{vis_dir}/vis_measurement.png', real_im[0], cmap='viridis', origin='lower')
+    save_image(real_im[0], f'{vis_dir}/vis_measurement.png')
     reference = real_im
     reference = torch.from_numpy(reference).to(DEVICE)
 
@@ -275,7 +267,7 @@ if __name__ == "__main__":
         ref_scaled = reference
 
 
-    real_im = np.load(f'{args.measurement_file}')[args.sci_which_int, (edge1-shift_y):(edge2-shift_y), (edge1-shift_x):(edge2-shift_x)]
+    real_im = crop_image(np.load(f'{args.measurement_file}')[args.sci_which_int], args.num_det_px, center=coronagraph_center)
     real_im = real_im.astype(np.float32)
 
     if real_im.ndim == 2:
@@ -314,7 +306,7 @@ if __name__ == "__main__":
 
     # Load fundamental noise maps 
     if args.measurement_noisemap is not None and args.weigh_loss_by_noise:
-        real_im_noisemap = np.load(f'{args.measurement_noisemap}')[args.sci_which_int, (edge1-shift_y):(edge2-shift_y), (edge1-shift_x):(edge2-shift_x)]
+        real_im_noisemap = crop_image(np.load(f'{args.measurement_noisemap}')[args.sci_which_int], args.num_det_px, center=coronagraph_center)
         real_im_noisemap = real_im_noisemap.astype(np.float32)
         if real_im_noisemap.ndim == 2:
             real_im_noisemap = real_im_noisemap[None]
@@ -327,7 +319,7 @@ if __name__ == "__main__":
             obs_scaled_noisemap = real_im_noisemap
 
     if args.reference_noisemap is not None:
-        reference_im_noisemap = np.load(f'{args.data_dir}/real_data/{args.reference_noisemap}')[args.sci_which_int, (edge1-shift_y):(edge2-shift_y), (edge1-shift_x):(edge2-shift_x)]
+        reference_im_noisemap = crop_image(np.load(f'{args.data_dir}/real_data/{args.reference_noisemap}')[args.sci_which_int], args.num_det_px, center=coronagraph_center)
         reference_im_noisemap = reference_im_noisemap.astype(np.float32)
         if reference_im_noisemap.ndim == 2:
             reference_im_noisemap = reference_im_noisemap[None]
@@ -344,7 +336,7 @@ if __name__ == "__main__":
         pred = [prop_models[j](wavefronts_list1, wfe_batch_list[j], wlen_weights[1], wlen_weights[0]) for j in range(len(prop_models))]
         pred = torch.mean(torch.cat(pred, 0), 0)
     pred_np = pred.cpu().numpy()
-    plt.imsave(f'{vis_dir}/vis_PSF_render_init.png', pred_np, cmap='viridis', origin='lower')
+    save_image(pred_np, f'{vis_dir}/vis_PSF_render_init.png')
 
     # Option to use simulated PSFs instead of injected planets on real data, for testing.
     if args.use_simulated_data:
@@ -385,8 +377,7 @@ if __name__ == "__main__":
     if args.px_mask_file is not None:
         px_mask = np.load(f'{args.px_mask_file}')
         if args.num_det_px != 80:
-            edge1, edge2 = 40 - int(args.num_det_px/2), 40 + int(args.num_det_px/2)
-            px_mask = px_mask[edge1:edge2, edge1:edge2]
+            px_mask = crop_image(px_mask, args.num_det_px, center=(40, 40))
         px_mask_numpy = px_mask.copy()
         px_mask = torch.from_numpy(px_mask.astype(np.float32)).to(DEVICE)[None]
 
@@ -394,16 +385,14 @@ if __name__ == "__main__":
     if args.pxartifactsmap_file is not None:
         pxartifactmap = np.load(f'{args.pxartifactsmap_file}')
         if args.num_det_px != 80:
-            edge1, edge2 = 40 - int(args.num_det_px/2), 40 + int(args.num_det_px/2)
-            pxartifactmap = pxartifactmap[edge1:edge2, edge1:edge2]
+            pxartifactmap = crop_image(pxartifactmap, args.num_det_px, center=(40, 40))
         pxartifactmap_numpy = pxartifactmap.copy()
         pxartifactmap = torch.from_numpy(pxartifactmap.astype(np.float32)).to(DEVICE)[None]
 
     if args.pxartifactsmap_ref_file is not None:
         pxartifactmap_ref = np.load(f'{args.pxartifactsmap_ref_file}')
         if args.num_det_px != 80:
-            edge1, edge2 = 40 - int(args.num_det_px/2), 40 + int(args.num_det_px/2)
-            pxartifactmap_ref = pxartifactmap_ref[edge1:edge2, edge1:edge2]
+            pxartifactmap_ref = crop_image(pxartifactmap_ref, args.num_det_px, center=(40, 40))
         pxartifactmap_ref_numpy = pxartifactmap_ref.copy()
         pxartifactmap_ref = torch.from_numpy(pxartifactmap_ref.astype(np.float32)).to(DEVICE)[None]
         
@@ -415,10 +404,10 @@ if __name__ == "__main__":
 
     
     est_residual = (obs_scaled - pred_scaled.expand_as(obs_scaled)).detach().cpu().mean(0).numpy()
-    plt.imsave(f'{vis_dir}/vis_est_res_init.png', est_residual, cmap='viridis', origin='lower')
+    save_image(est_residual, f'{vis_dir}/vis_est_res_init.png')
 
     est_ref_residual = (obs_scaled - ref_scaled.expand_as(obs_scaled)).detach().cpu().mean(0).numpy()
-    plt.imsave(f'{vis_dir}/vis_ref_res_init.png', est_ref_residual, cmap='viridis', origin='lower')
+    save_image(est_ref_residual, f'{vis_dir}/vis_ref_res_init.png')
 
     if not args.no_median:
         obs_scaled = observations / observations.median()
@@ -427,7 +416,7 @@ if __name__ == "__main__":
         obs_scaled = observations
         pred_scaled = pred
     est_residual = (obs_scaled - pred_scaled.expand_as(obs_scaled)).detach().cpu().mean(0).numpy()
-    plt.imsave(f'{vis_dir}/vis_est_res_init.png', est_residual, cmap='viridis', origin='lower')
+    save_image(est_residual, f'{vis_dir}/vis_est_res_init.png')
 
 
     # Set up the optimizer and scheduler
@@ -667,10 +656,8 @@ if __name__ == "__main__":
             if i < (args.stage_fluxpos_cutoff_iter + cutoff_iter):
                 # Update flux parameter to match total flux in the observation within a central N pixels
                 with torch.no_grad():
-                    fluxwindsize = args.fluxwindsize 
-                    maskslice = px_mask[:,(int(pred_scaled.shape[-1]/2) - int(fluxwindsize/2)):(int(pred_scaled.shape[-1]/2) + int(fluxwindsize/2)),(int(pred_scaled.shape[-1]/2) - int(fluxwindsize/2)):(int(pred_scaled.shape[-1]/2) + int(fluxwindsize/2))]
-                    tot_flux_pred = (maskslice*pred_scaled[:,(int(pred_scaled.shape[-1]/2) - int(fluxwindsize/2)):(int(pred_scaled.shape[-1]/2) + int(fluxwindsize/2)),(int(pred_scaled.shape[-1]/2) - int(fluxwindsize/2)):(int(pred_scaled.shape[-1]/2) + int(fluxwindsize/2))]).sum()
-                    tot_flux_target = (maskslice*obs_scaled[:,(int(obs_scaled.shape[-1]/2) - int(fluxwindsize/2)):(int(obs_scaled.shape[-1]/2) + int(fluxwindsize/2)),(int(obs_scaled.shape[-1]/2) - int(fluxwindsize/2)):(int(obs_scaled.shape[-1]/2) + int(fluxwindsize/2))]).sum()
+                    tot_flux_pred = masked_flux(pred_scaled, px_mask, args.fluxwindsize)
+                    tot_flux_target = masked_flux(obs_scaled, px_mask, args.fluxwindsize)
                     if args.inject_all_in_same_frame:
                         flux_mismatch_ratio = tot_flux_target / tot_flux_pred
                     else:
@@ -702,13 +689,11 @@ if __name__ == "__main__":
         elif i < args.stage_fluxpos_cutoff_iter:
             # If we are in the first sub-stage, update flux to equate total flux in the observation within a central N pixels
             with torch.no_grad():
-                fluxwindsize = args.fluxwindsize 
-                maskslice = px_mask[:,(int(pred_scaled.shape[-1]/2) - int(fluxwindsize/2)):(int(pred_scaled.shape[-1]/2) + int(fluxwindsize/2)),(int(pred_scaled.shape[-1]/2) - int(fluxwindsize/2)):(int(pred_scaled.shape[-1]/2) + int(fluxwindsize/2))]
-                tot_flux_pred = (maskslice*pred_scaled[:,(int(pred_scaled.shape[-1]/2) - int(fluxwindsize/2)):(int(pred_scaled.shape[-1]/2) + int(fluxwindsize/2)),(int(pred_scaled.shape[-1]/2) - int(fluxwindsize/2)):(int(pred_scaled.shape[-1]/2) + int(fluxwindsize/2))]).sum()
+                tot_flux_pred = masked_flux(pred_scaled, px_mask, args.fluxwindsize)
                 if i > cutoff_iter:
-                    tot_flux_target = (maskslice*obs_scaled[:,(int(obs_scaled.shape[-1]/2) - int(fluxwindsize/2)):(int(obs_scaled.shape[-1]/2) + int(fluxwindsize/2)),(int(obs_scaled.shape[-1]/2) - int(fluxwindsize/2)):(int(obs_scaled.shape[-1]/2) + int(fluxwindsize/2))]).sum()
+                    tot_flux_target = masked_flux(obs_scaled, px_mask, args.fluxwindsize)
                 else:
-                    tot_flux_target = (maskslice*ref_scaled[:,(int(ref_scaled.shape[-1]/2) - int(fluxwindsize/2)):(int(ref_scaled.shape[-1]/2) + int(fluxwindsize/2)),(int(ref_scaled.shape[-1]/2) - int(fluxwindsize/2)):(int(ref_scaled.shape[-1]/2) + int(fluxwindsize/2))]).sum()
+                    tot_flux_target = masked_flux(ref_scaled, px_mask, args.fluxwindsize)
 
                 flux_mismatch_ratio = tot_flux_target / tot_flux_pred
                 for p_model in prop_models:
@@ -811,26 +796,10 @@ if __name__ == "__main__":
                         hip65426_snr.append(hip_curr_snr)
 
                     if i%300 == 0:
-                        plt.figure(figsize=[15,10])
-                        plt.subplot(231)
-                        plt.imshow(curr_frame_orig, origin='lower')
-                        plt.title(f'Sum, peak = {np.nansum(curr_frame_orig):.2f},{np.nanmax(curr_frame_orig):.2f} (orig)')
-                        plt.subplot(232)
-                        plt.imshow(curr_frame_masked, origin='lower', vmin=-10)
-                        plt.subplot(234)
-                        plt.imshow(annulus, origin='lower')
-                        plt.title(f'Stddev = {np.nanstd(annulus):.2f} (annulus synthetic)')
-                        plt.subplot(235)
-                        plt.imshow(signal_blob, origin='lower')
-                        plt.title(f'Sum, peak = {np.nansum(signal_blob):.2f},{peak_blob:.2f},\n pos x, pos y, flux input ={injected_companion["pos_x_px"]:.2f},{injected_companion["pos_y_px"]:.2f},{injected_companion["flux"]:.2f}')
-                        whole_annulus = np.where(~np.isnan(signal_blob), signal_blob, annulus)
-                        plt.subplot(236)
-                        plt.imshow(whole_annulus, origin='lower')
-                        plt.title(f'Whole annulus. \n Peak, mean, stddev = {np.nanmax(whole_annulus):.2f}, {np.nanmean(whole_annulus):.2f}, {np.nanstd(whole_annulus):.2f}')
-                        plt.suptitle(f'Curr SNR: {curr_snr:.2f}')
-                        plt.tight_layout()
-                        plt.savefig(f'{vis_dir_iterations_current}/vis_measurement_INJECTED_iter{i}_{label}_comp{j}.png')
-                        plt.close()
+                        plot_planet_diagnostics(
+                            curr_frame_orig, curr_frame_masked, annulus, signal_blob,
+                            peak_blob, injected_companion, curr_snr,
+                            f'{vis_dir_iterations_current}/vis_measurement_INJECTED_iter{i}_{label}_comp{j}.png')
 
                 curr_iter_snrs = np.array(curr_iter_snrs)
                 curr_iter_signal_blob_peak = np.array(curr_iter_signal_blob_peak)
@@ -854,9 +823,9 @@ if __name__ == "__main__":
 
             
             if i % args.vis_freq == 0 and i > cutoff_iter:
-                plt.imsave(f'{vis_dir}/vis_est_res_TARG_{i}.png', progress_arr_target[-1], cmap='viridis', origin='lower')
+                save_image(progress_arr_target[-1], f'{vis_dir}/vis_est_res_TARG_{i}.png')
             elif i % args.vis_freq == 0:
-                plt.imsave(f'{vis_dir}/vis_est_res_REF_{i}.png', progress_arr_reference[-1], cmap='viridis', origin='lower')
+                save_image(progress_arr_reference[-1], f'{vis_dir}/vis_est_res_REF_{i}.png')
 
             
             cur_opd = prop_models[0].wfe_offsets.forward(wfe_batch_list[0]).squeeze().detach().cpu()
@@ -899,47 +868,9 @@ if __name__ == "__main__":
              history_columns=['iteration', 'axial_offset_m', 'loss'])
     print(f'{args.element} axial displacement: {axial_offset.item():.8g} primary-equivalent m')
 
-    # End of loop; now save results 
-    if args.track_injected_planet: 
-        # Save results for the planet injection every certian number of iterations; useful to define a stopping condition afterwards
-        sci_injected_peaks = np.array(sci_injected_peaks)
-        sci_signal_loss = np.array(sci_signal_loss)
-        hip65426_snr = np.array(hip65426_snr)
-        sci_snr = np.array(sci_snr)
-        sci_iters = np.array(sci_iters)
-
-        np.save(os.path.join(vis_dir_iterations, 'sci_injected_peaks_postsub.npy'), sci_injected_peaks)
-        np.save(os.path.join(vis_dir_iterations, 'sci_injected_signal_loss.npy'), sci_signal_loss)
-        np.save(os.path.join(vis_dir_iterations, 'realtarget_snr.npy'), hip65426_snr)
-        np.save(os.path.join(vis_dir_iterations, 'sci_injected_snr.npy'), sci_snr)
-        np.save(os.path.join(vis_dir_iterations, 'sci_iters.npy'), sci_iters)
-
-
-    visvidfreq = 1
-    # Video animation of stage 1 optimization
-    progress_arr = np.array(progress_arr_reference)[::visvidfreq]
-    progress_arr = np.array([(im - im.min()) / (im.max() - im.min()) for im in progress_arr])
-    progress_arr = np.uint8(cm.viridis(progress_arr) * 255)
-    progress_arr = np.flip(progress_arr, 1)
-    imageio.mimsave(f'{vis_dir}/progress_REFERENCE.mp4', progress_arr, 
-                    'FFMPEG', **{'macro_block_size': None, 'ffmpeg_params': ['-s','256x256', '-v', '0'], 'fps': 30, })
-    
-
-     # Video animation of stage 2 optimization
-    progress_arr = np.array(progress_arr_target)[::visvidfreq]
-    progress_arr = np.array([(im - im.min()) / (im.max() - im.min()) for im in progress_arr])
-    progress_arr = np.uint8(cm.viridis(progress_arr) * 255)
-    progress_arr = np.flip(progress_arr, 1)
-    imageio.mimsave(f'{vis_dir}/progress_TARGET.mp4', progress_arr, 
-                    'FFMPEG', **{'macro_block_size': None, 'ffmpeg_params': ['-s','256x256', '-v', '0'], 'fps': 30, })
-
-    # Save result on reference and science targets
-    target_numpys = np.squeeze(np.array(progress_arr_target))
-    reference_numpys = np.squeeze(np.array(progress_arr_reference))
-
-    np.save(f'{vis_dir}/last_iteration_oversample_{args.oversample}_wl_sampling_{args.num_wl}.npy', target_numpys[-1])
-
-    np.save(f'{vis_dir}/last_iteration_REFERENCE_oversample_{args.oversample}_wl_sampling_{args.num_wl}.npy', reference_numpys[-1])
-    
-   
-
+    # End of loop; now save results
+    if args.track_injected_planet:
+        save_planet_metrics(vis_dir_iterations, sci_injected_peaks, sci_signal_loss,
+                            hip65426_snr, sci_snr, sci_iters)
+    save_fit_results(vis_dir, progress_arr_reference, progress_arr_target,
+                     args.oversample, args.num_wl)
