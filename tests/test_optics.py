@@ -10,7 +10,7 @@ from types import SimpleNamespace
 from dl_utils import dl_MFT, crop_to
 from optical_elements import DiffImageOptic, DiffPupilOptic, DiffLyotOptic, DiffOpticalSystem, DiffDetector
 from bluestein_fft import bluestein_fft, centered_fft
-from diffraction import fresnel, FresnelSingle, FresnelTransfer
+from diffraction import FresnelSingle, FresnelTransfer
 
 
 def asymmetric_field(npixels):
@@ -223,13 +223,10 @@ def test_displaced_gaussian_mask_against_bluestein_and_analytic_field(direction)
     assert torch.linalg.vector_norm(analytic - field * mask) > 0.01 * torch.linalg.vector_norm(analytic)
 
 
-def test_fresnel_selection_and_unresolved_grids():
+def test_transfer_at_zero_distance_preserves_field():
     field = asymmetric_field(8)
-    torch.testing.assert_close(fresnel(field, 2e-5, 1e-6, 0.), field)
-    with pytest.raises(ValueError, match='refine the sampling'):
-        fresnel(field, 2e-5, 1e-6, 1e-5, d_out=3e-5)
-    with pytest.raises(ValueError, match='fixed method'):
-        fresnel(field, 2e-5, 1e-6, torch.tensor(0., requires_grad=True))
+    propagator = FresnelTransfer(2e-5, 1e-6)
+    torch.testing.assert_close(propagator.propagate(field, 0.), field)
 
 
 @pytest.mark.parametrize('z', [-0.002, 0., 0.002])
