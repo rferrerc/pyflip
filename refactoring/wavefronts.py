@@ -7,8 +7,8 @@ from model_classes import FluxOffsetModule
 class BroadbandWavefront(nn.Module):
     def __init__(self, npixels: int, diameter: float, wavelength: list, peak_flux: float, angles = None, angles_offset=None, DEVICE='cuda'):
         super().__init__()
-        self.wavelengths = nn.Parameter(torch.tensor(wavelength[0]), requires_grad=False).to(DEVICE)
-        self.wl_weights = nn.Parameter(torch.tensor(wavelength[1]), requires_grad=False).to(DEVICE)
+        self.wavelengths = nn.Parameter(torch.as_tensor(wavelength[0], dtype=torch.float64, device=DEVICE), requires_grad=False)
+        self.wl_weights = nn.Parameter(torch.as_tensor(wavelength[1], dtype=torch.float64, device=DEVICE), requires_grad=False)
         self.pixel_scale = nn.Parameter(torch.from_numpy(np.asarray(diameter / npixels, float)), requires_grad=False)
         self.wavenumbers = 2 * np.pi / self.wavelengths
         self.npixels = npixels

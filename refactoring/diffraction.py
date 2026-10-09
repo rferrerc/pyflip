@@ -49,7 +49,7 @@ class Fresnel:
     """
     def __init__(self, d_in, wavelength):
         self.d_in = d_in
-        self.wavelength = wavelength
+        self.wavelength = torch.as_tensor(wavelength, dtype=torch.float64)
 
 
 class FresnelTransfer(Fresnel):

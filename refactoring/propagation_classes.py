@@ -11,7 +11,7 @@ from model_classes import ShiftModule, GridOffsetModule,FlatFieldingModule,PerMi
 class Wavefront(nn.Module):
     def __init__(self, npixels: int, diameter: float, wavelength: float, peak_flux: float, angles = None):
         super().__init__()
-        self.wavelength = nn.Parameter(wavelength, requires_grad=False)
+        self.wavelength = nn.Parameter(torch.as_tensor(wavelength, dtype=torch.float64), requires_grad=False)
         self.pixel_scale = nn.Parameter(torch.from_numpy(np.asarray(diameter / npixels, float)), requires_grad=False)
         self.wavenumber = 2 * np.pi / self.wavelength
         self.npixels = npixels
@@ -104,7 +104,7 @@ class Wavefront(nn.Module):
 class BroadbandWavefront(nn.Module):
     def __init__(self, npixels: int, diameter: float, wavelength: list, peak_flux: float, angles = None, DEVICE='cuda'):
         super().__init__()
-        self.wavelengths = nn.Parameter(torch.tensor(wavelength), requires_grad=False).to(DEVICE)
+        self.wavelengths = nn.Parameter(torch.as_tensor(wavelength, dtype=torch.float64, device=DEVICE), requires_grad=False)
         self.pixel_scale = nn.Parameter(torch.from_numpy(np.asarray(diameter / npixels, float)), requires_grad=False)
         self.wavenumbers = 2 * np.pi / self.wavelengths
         self.npixels = npixels
