@@ -14,6 +14,29 @@ else:
     from bluestein_fft import bluestein_fft, centered_fft
 
 
+def propagate_wavelengths(phasors, propagators, distance):
+    """Propagate each wavelength using its corresponding propagator.
+
+    Parameters
+    ----------
+    phasors : torch.Tensor
+        Complex fields, shape (..., n_wl, n, n).
+    propagators : sequence of Fresnel
+        One propagator per wavelength, in the same order as phasors.
+    distance : float or torch.Tensor
+        Propagation distance [m].
+
+    Returns
+    -------
+    torch.Tensor
+        Propagated fields with wavelength on the third-to-last axis.
+    """
+    return torch.stack([
+        propagator.propagate(phasors[..., i, :, :], distance)
+        for i, propagator in enumerate(propagators)
+    ], dim=-3)
+
+
 class Fresnel:
     """Common sampling and wavelength for Fresnel diffraction.
 
