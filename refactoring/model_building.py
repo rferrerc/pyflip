@@ -284,9 +284,9 @@ def assemble_JWST_NIRCam_coron(data_dir,num_det_px,psf_pixel_scale=0.062424185,d
     subpix_x, subpix_y =  0.,0.
 
     if inst_properties['image_mask'] == 'MASK335R' and inst_properties['filter'] == 'F444W':
-        subpix_x, subpix_y = -0.12,-0.11
+        subpix_x, subpix_y = -0.536,-0.526 # -0.12,-0.11 plus the -0.416 px shift the former 2x2 charge diffusion kernel used to apply
     elif inst_properties['image_mask'] == 'MASKLWB':
-        subpix_x, subpix_y = 0.33,-0.11 # Based on F410M if I remember correctly, but should double check
+        subpix_x, subpix_y = -0.086,-0.526 # Based on F410M if I remember correctly, but should double check (0.33,-0.11 plus the -0.416 px of the former 2x2 kernel)
 
     NIRCam_detector = DiffDetector(prop_args,shift_x=subpix_x, shift_y=subpix_y, name='NIRCamdetector')
 
