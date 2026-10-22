@@ -234,7 +234,7 @@ def assemble_JWST_NIRCam_coron(data_dir,num_det_px,psf_pixel_scale=0.062424185,d
 
     aperture = torch.FloatTensor(aperture.copy()).to(DEVICE)[None]
 
-    nircam_OPD = torch.tensor(nircam_OPD, dtype=torch.float64).to(DEVICE)[None]
+    nircam_OPD = torch.tensor(nircam_OPD, dtype=torch.float32).to(DEVICE)[None]
     lyot = torch.FloatTensor(lyot).to(DEVICE)[None]
     fpm = torch.FloatTensor(fpm).to(DEVICE)[None]
     wlen_weights = torch.FloatTensor(wlen_weights).to(DEVICE)

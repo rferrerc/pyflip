@@ -27,7 +27,8 @@ def track_SNR(est_residual_obs, curr_iter, track_locs, track_fluxes,app_size=0.3
     if 'MASKLWB' in mask_name:
         if px_mask_nanned.shape[-1] == 80:
             # We only have a pre-generated pixel map for the 80x80 case
-            mask_along_bar = f'data/common_masks/mask_along_bar.npy'
+            package_directory = os.path.dirname(os.path.abspath(__file__))
+            mask_along_bar = package_directory+f'/data/common_masks/mask_along_bar.npy'
             mask_along_bar = np.load(mask_along_bar)
             mask_along_bar_nanned = np.where(mask_along_bar == 0., np.nan, mask_along_bar)
             px_mask_nanned+=mask_along_bar_nanned # Combine into a single NAN mask
@@ -338,7 +339,8 @@ def generate_flux_rel_5sigma_fundamental_noise(fakes,noise_map,nsigma, mask_name
     noise_realization = np.squeeze(noise_realization)
     noise_curve_seps, noise_curve_fluxes = meas_contrast(noise_realization, 0, int(npixels/2), annulus_size, low_pass_filter=smooth_sigma_px)
     if mask_name is not None:
-        mask_transmission_csv = f'data/coron_transmission_csvs/{mask_name}.csv'
+        package_directory = os.path.dirname(os.path.abspath(__file__))
+        mask_transmission_csv = package_directory+f'/data/coron_transmission_csvs/{mask_name}.csv'
         try:
             instrument_throughput = np.genfromtxt(mask_transmission_csv, delimiter=',')
         except FileNotFoundError:

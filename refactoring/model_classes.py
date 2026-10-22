@@ -5,32 +5,49 @@ import numpy as np
 import math 
 
 class ShiftModule(nn.Module):
+    """Shift, rotation and magnification of a mask about the grid centre, by bilinear resampling.
+
+    Parameters
+    ----------
+    height, width : int
+        Mask shape [samples].
+    learn_scale : bool, optional
+        Fit the magnification as well.
+    device : str or torch.device, optional
+        Device of the parameters and the sample grid.
+
+    Attributes
+    ----------
+    x_shift, y_shift : torch.nn.Parameter
+        Shift [samples], positive towards larger column / row index.
+    rotation : torch.nn.Parameter
+        Rotation [deg], positive from +x towards +y.
+    scale : torch.nn.Parameter
+        Magnification.
+    """
     def __init__(self, height, width, learn_scale=False, device='cuda'):
-        super(ShiftModule, self).__init__()
-        self.x_shift = nn.Parameter(torch.zeros(1).to(device), requires_grad=True)
-        self.y_shift = nn.Parameter(torch.zeros(1).to(device), requires_grad=True)
-        y_coords, x_coords = torch.meshgrid(torch.arange(height), torch.arange(width), indexing='ij')
-        grid = torch.stack((x_coords, y_coords), dim=-1).float()
-        grid[:, :, 0] = 2.0 * grid[:, :, 0] / (width - 1) - 1.0
-        grid[:, :, 1] = 2.0 * grid[:, :, 1] / (height - 1) - 1.0
-        self.grid = nn.Parameter(grid[None].to(device), requires_grad=False)
-        self.rotation = nn.Parameter(torch.zeros(1).to(device), requires_grad=True)
-        self.scale = nn.Parameter(torch.ones(1).to(device), requires_grad=learn_scale)
+        super().__init__()
+        self.x_shift = nn.Parameter(torch.zeros(1, dtype=torch.float64, device=device))
+        self.y_shift = nn.Parameter(torch.zeros(1, dtype=torch.float64, device=device))
+        self.rotation = nn.Parameter(torch.zeros(1, dtype=torch.float64, device=device))
+        self.scale = nn.Parameter(torch.ones(1, dtype=torch.float64, device=device), requires_grad=learn_scale)
+        y, x = torch.meshgrid(torch.arange(height, dtype=torch.float64, device=device) - (height - 1) / 2,
+                              torch.arange(width, dtype=torch.float64, device=device) - (width - 1) / 2, indexing='ij')
+        self.register_buffer('x', x)
+        self.register_buffer('y', y)
 
-    def forward(self, x):
-        grid = self.grid.clone().to(x.dtype) * self.scale
-
-        cos_theta = torch.cos(self.rotation)
-        sin_theta = torch.sin(self.rotation)
-        rotation_matrix = torch.tensor([[cos_theta, -sin_theta], [sin_theta, cos_theta]]).to(x.device).to(x.dtype)
-        grid = torch.matmul(grid.view(-1, 2), rotation_matrix).view(1, x.shape[-2], x.shape[-1], 2)
-
-        grid[..., 0] = grid[..., 0] + self.x_shift
-        grid[..., 1] = grid[..., 1] + self.y_shift
-
-        out = F.grid_sample(x[None], grid, mode='bilinear', padding_mode='reflection', align_corners=False)
-
-        return out[0]
+    def forward(self, mask):
+        """Moved mask, with the shape (..., height, width) and dtype of mask."""
+        height, width = mask.shape[-2:]
+        angle = torch.deg2rad(self.rotation)
+        cos, sin = torch.cos(angle), torch.sin(angle)
+        rot_matrix = torch.stack((torch.cat((cos, sin)), torch.cat((-sin, cos))))
+        positions = torch.stack((self.x - self.x_shift, self.y - self.y_shift), dim=-1)
+        x_in, y_in = (positions @ rot_matrix.T / self.scale).unbind(-1)
+        grid = torch.stack((x_in * 2 / width, y_in * 2 / height), dim=-1)
+        flat = mask.reshape(-1, 1, height, width).to(torch.float64)
+        out = F.grid_sample(flat, grid.expand(len(flat), -1, -1, -1), mode='bilinear', padding_mode='zeros', align_corners=False)
+        return out.reshape(mask.shape).to(mask.dtype)
 
 class DetSubPixShift(nn.Module):
     def __init__(self, shift_x, shift_y):
@@ -48,7 +65,7 @@ class DetSubPixShift(nn.Module):
         theta = torch.tensor([[
             [1, 0, -2 * self.shift_x / W],  # x shift
             [0, 1, -2 * self.shift_y / H]   # y shift
-        ]], dtype=torch.double, device=image.device)
+        ]], dtype=image.dtype, device=image.device)
 
         # Repeat theta for batch
         theta = theta.expand(N, -1, -1)
@@ -80,7 +97,7 @@ def shift_image_subpixel(image: torch.Tensor, shift_x: float = -0.12, shift_y: f
     theta = torch.tensor([[
         [1, 0, -2 * shift_x / W],  # x shift
         [0, 1, -2 * shift_y / H]   # y shift
-    ]], dtype=torch.double, device=image.device)
+    ]], dtype=image.dtype, device=image.device)
 
     # Repeat theta for batch
     theta = theta.expand(N, -1, -1)
@@ -405,7 +422,7 @@ class LearnableGaussianBlur(nn.Module):
             raise ValueError("Input must have shape (1, 1, N, H, W)")
 
         sigma = torch.exp(self.log_sigma)
-        coords = torch.arange(self.kernel_size, dtype=torch.double, device=x.device) - self.kernel_size // 2
+        coords = torch.arange(self.kernel_size, dtype=x.dtype, device=x.device) - self.kernel_size // 2
         kernel_1d = torch.exp(-0.5 * (coords / sigma)**2)
         kernel_1d = kernel_1d / kernel_1d.sum()
 

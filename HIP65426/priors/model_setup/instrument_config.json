@@ -1,0 +1,1 @@
+{"instrument": "NIRCam", "filter": "F444W", "image_mask": "MASK335R", "pupil_mask": "CIRCLYOT", "img_oversample": 2, "num_wl": 21, "note": "layout of model_building.generate_STPSF_model_params, built from ../../model_setup (symlinks)"}

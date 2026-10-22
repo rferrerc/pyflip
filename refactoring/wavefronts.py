@@ -7,8 +7,8 @@ from model_classes import FluxOffsetModule
 class BroadbandWavefront(nn.Module):
     def __init__(self, npixels: int, diameter: float, wavelength: list, peak_flux: float, angles = None, angles_offset=None, DEVICE='cuda'):
         super().__init__()
-        self.wavelengths = nn.Parameter(torch.tensor(wavelength[0]), requires_grad=False).to(DEVICE)
-        self.wl_weights = nn.Parameter(torch.tensor(wavelength[1]), requires_grad=False).to(DEVICE)
+        self.wavelengths = nn.Parameter(torch.tensor(wavelength[0], dtype=torch.float32), requires_grad=False).to(DEVICE)
+        self.wl_weights = nn.Parameter(torch.tensor(wavelength[1], dtype=torch.float32), requires_grad=False).to(DEVICE)
         self.pixel_scale = nn.Parameter(torch.from_numpy(np.asarray(diameter / npixels, float)), requires_grad=False)
         self.wavenumbers = 2 * np.pi / self.wavelengths
         self.npixels = npixels
@@ -17,7 +17,7 @@ class BroadbandWavefront(nn.Module):
 
         self.flux_correction = FluxOffsetModule() # TODO: check if this is better than tuning peak flux above
 
-        self.coordinates = nn.Parameter(pixel_coords(self.npixels, self.diameter), requires_grad=False)
+        self.coordinates = nn.Parameter(pixel_coords(self.npixels, self.diameter).to(torch.float32), requires_grad=False)
         if angles is None:
             angles = torch.zeros(2).to(DEVICE)
         else:
@@ -36,8 +36,8 @@ class BroadbandWavefront(nn.Module):
             self.amplitude.data = torch.ones_like(self.amplitude.data) / self.npixels**1
             self.phase.data = torch.zeros_like(self.phase.data)
         else:
-            self.amplitude = nn.Parameter(torch.ones((1, self.npixels, self.npixels), dtype=torch.float64) / self.npixels**1)
-            self.phase = nn.Parameter(torch.zeros((1, self.npixels, self.npixels), dtype=torch.float64))
+            self.amplitude = nn.Parameter(torch.ones((1, self.npixels, self.npixels), dtype=torch.float32) / self.npixels**1)
+            self.phase = nn.Parameter(torch.zeros((1, self.npixels, self.npixels), dtype=torch.float32))
 
     def get_phasors(self):
         opd = self.get_tilts_opd()

@@ -99,7 +99,7 @@ class DiffDetector(DiffOpticalElement):
         for i in range(len(wavelengths)):
             args = (npixels, wavelengths[i].item(), true_pixel_scale, psf_npix*self.oversample, psf_pixel_scale/self.oversample, focal_length, shift, pixel, inverse)
             x_mat, y_mat, mult = partial_MFT(*args)
-            xmats.append(x_mat); ymats.append(y_mat); mults.append(torch.tensor(mult, dtype=torch.float64))
+            xmats.append(x_mat.to(torch.complex64)); ymats.append(y_mat.to(torch.complex64)); mults.append(torch.tensor(mult, dtype=torch.float32))
         self.x_mat = nn.Parameter(torch.stack(xmats), requires_grad=False).to(device)
         self.y_mat = nn.Parameter(torch.stack(ymats), requires_grad=False).to(device)
         self.mult = nn.Parameter(torch.stack(mults), requires_grad=False).to(device)
