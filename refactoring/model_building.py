@@ -60,6 +60,10 @@ def create_STPSF_model(from_obs=None, instrument='NIRCam', inst_params={'filter'
         inst_instance.options['pupil_shift_x'] =0.00898595
         inst_instance.options['pupil_shift_y'] = 0.00132024
         inst_instance.options['pupil_rotation'] = -0.08309628
+    else:
+        inst_instance.options['pupil_shift_x'] =0.0
+        inst_instance.options['pupil_shift_y'] = 0.0
+        inst_instance.options['pupil_rotation'] = 0.0
         # nircam_instance.options['defocus_waves'] = -0.00883023# TODO: implement this in FLIP
     
     return inst_instance 

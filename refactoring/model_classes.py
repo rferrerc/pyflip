@@ -109,6 +109,24 @@ class GridOffsetModule(nn.Module):
         return out
     
 
+class LinearChromaticTiltOPD(nn.Module):
+    def __init__(self, height, width,delta_slope_interpt=[0.,0.]):
+        super().__init__()
+        grid = torch.zeros((height, width))
+        self.grid = nn.Parameter(grid[None], requires_grad=True)
+
+    def get_res(self):
+        res = self.grid
+        return res
+
+    def forward(self, x=None):
+        res = self.grid
+        if x is None:
+            return res
+        out = res + x
+        return out
+    
+
 class FlatFieldingModule(nn.Module):
     def __init__(self, height, width, device='cuda'):
         super().__init__()
