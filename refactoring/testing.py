@@ -116,6 +116,8 @@ sci_loss_weight = 0.005 # How much to weigh down the loss function when evaluati
 
 measure_SNR_every = 300 # measure the SNR of the fake planet(s) every how many iterations 
 
+loss_clip_nsigma = None # MAD sigma clipping of the science-stage loss (stage 2.2), e.g. 5.; None: plain loss
+
 stage_cutoffs = [600, 3500, 5500, 6100, 11000] # Iterations separating stage 1.1, 1.2, 1.3, 2.1 and 2.2 in our default stage framework
 
 
@@ -137,8 +139,16 @@ for i in tbar:
     else:
         loss = F.l1_loss(PSF, sci, reduction='none') * sci_loss_weight
 
-    loss *= px_mask # Mask out bad pixels so they don't contribute to loss function
-    loss = loss.sum() / px_mask.sum() # Collapse loss into a number
+    weight = px_mask
+    if loss_clip_nsigma is not None and i >= stage_cutoffs[3]:
+        # MAD sigma clipping: pixels where the residual exceeds loss_clip_nsigma robust sigmas (1.4826 * median |residual|)
+        # get zero weight this iteration, so that a planet (or anything the model cannot produce) stays out of the fit
+        with torch.no_grad():
+            res = (sci - PSF)[px_mask > 0]
+            clip = ((sci - PSF) > loss_clip_nsigma * 1.4826 * res.abs().median()).float()
+        weight = px_mask * (1. - clip)
+    loss *= weight # Mask out bad pixels so they don't contribute to loss function
+    loss = loss.sum() / weight.sum() # Collapse loss into a number
 
     # At this step, we can add some regularization to the loss function if we want. E.g., smoothness or whatever
     # Otherwise, continue to backpropagation and parameter update

@@ -45,3 +45,21 @@ def prior_stages(instrument, wavefront, stage_number, stage_cutoffs = [600, 3500
         instrument.optical_system.JWSTPrimary.wfe_offsets.grid.grad*= 1. if fit_ote_in_science else 0.
         instrument.optical_system.NIRCamLyotstop.wfe_offsets.grid.grad*= 1.
         instrument.optical_system.NIRCamdetector.detector_flat_field.grid.grad*= 0.
+
+
+# Stages of testing_sci.py / testing_sci_priors.py (no reference frame): star position only before stage_cutoffs[0], then the
+# two OPD grids (or, with the priors, their latents: the grids are frozen by DPSAdamOPD's hook); the detector flats are never
+# fitted (a per-pixel flat fitted on the planet frame could absorb the planet).
+
+def sci_stages(instrument, wavefront, stage_number, stage_cutoffs = [600, 5500]):
+    instrument.optical_system.NIRCamdetector.detector_flat_field.grid.grad*= 0.
+    if stage_number < stage_cutoffs[0]:
+        # Only fit star position
+        wavefront.angles_offset.grad*=1.
+        instrument.optical_system.JWSTPrimary.wfe_offsets.grid.grad*= 0.
+        instrument.optical_system.NIRCamLyotstop.wfe_offsets.grid.grad*= 0.
+    else:
+        # Stop fitting position and flux; only fit OPDs
+        wavefront.angles_offset.grad*=0.
+        instrument.optical_system.JWSTPrimary.wfe_offsets.grid.grad*= 1.
+        instrument.optical_system.NIRCamLyotstop.wfe_offsets.grid.grad*= 1.

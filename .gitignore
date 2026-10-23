@@ -2,6 +2,7 @@
 outputs/
 __pycache__/
 refactoring/testing_priors_plot.py
+refactoring/testing_sci_priors_plot.py
 HIP65426/drive_data/
 HIP65426/priors/calints/
 HIP65426/priors/outputs/

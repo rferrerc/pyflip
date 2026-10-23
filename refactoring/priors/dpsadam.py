@@ -123,4 +123,4 @@ class DPSAdamOPD(nn.Module):
             return x + self.grid # before the first phase, init='wfs': as OPDOffsetModule with a zero grid
         if self.mode == 'offset':
             res = res + x
-        return res + self.grid
+        return (res + self.grid).to(x.dtype) # the prior works in float64, the optical model in the optic's dtype (float32 upstream)
