@@ -3,6 +3,7 @@ import torch
 import numpy as np 
 from model_classes import OPDOffsetModule, LearnableGaussianBlur,FlatFieldingModule, DetSubPixShift,ShiftModule
 from dl_utils import crop_to, partial_MFT, shift_image_subpixel
+from util import mft_matrix, mft
 import sys 
 
 class DiffOpticalElement(nn.Module):
@@ -81,6 +82,51 @@ class DiffImageOptic(DiffOpticalElement):
 
         return new_phasor
     
+
+class BabinetImageOptic(DiffOpticalElement):
+    """Focal plane mask applied through Babinet's principle: E_out = E - T_back[m T[E]], with m
+    the conjugate mask 1 - t sampled around the optical axis and T the matrix Fourier
+    transform of the pupil field onto those samples (util.mft).
+
+    Parameters
+    ----------
+    conjugate_mask : array_like
+        1 - transmission, shape (N, N), optical axis on the centre sample.
+    d_mask : float
+        Sample spacing of the mask on the sky [rad].
+    wavelengths : array_like
+        Wavelengths [m], shape (n_wl,).
+    pixel_scale : float
+        Pupil sampling [m].
+    npixels_in : int
+        Number of pupil samples.
+
+    Attributes
+    ----------
+    conjugate_mask : torch.Tensor
+        The mask, shape (N, N).
+    matrix : torch.Tensor
+        Pupil to mask transforms, shape (n_wl, npixels_in, N).
+    mult : torch.Tensor
+        Normalisation of the transform there and back, (pixel_scale d_mask / wavelength)^2, shape (n_wl, 1, 1).
+    """
+    def __init__(self, conjugate_mask, d_mask, wavelengths, pixel_scale, npixels_in, name=None, device='cuda'):
+        super().__init__()
+        self.name = name
+        self.optic_type = 'image'
+        conjugate_mask = torch.as_tensor(np.asarray(conjugate_mask), dtype=torch.float32)
+        wavelengths = torch.as_tensor(np.asarray(wavelengths, dtype=np.float64))
+        matrices = [mft_matrix(npixels_in, pixel_scale, conjugate_mask.shape[-1], d_mask, wavelength.item()) for wavelength in wavelengths]
+        mult = (pixel_scale * d_mask / wavelengths)**2
+        self.register_buffer('conjugate_mask', conjugate_mask.to(device))
+        self.register_buffer('matrix', torch.stack(matrices).to(torch.complex64).to(device))
+        self.register_buffer('mult', mult.to(torch.float32).view(-1, 1, 1).to(device))
+
+    def forward(self, phasor, npixels_in, oversample=2):
+        back = self.matrix.conj().transpose(-2, -1)
+        focal = mft(phasor, self.matrix, self.matrix) * self.mult
+        return phasor - mft(focal * self.conjugate_mask, back, back)
+
 
 class DiffDetector(DiffOpticalElement):
     def __init__(self,args,oversample=2, name=None, num_det_px=80, shift_x=-0.12, shift_y=-0.11, device='cuda'):

@@ -3,7 +3,7 @@ from dl_utils import load_model_data,arcsec2rad
 import numpy as np 
 import torch.nn.functional as F
 import torch.nn as nn
-from optical_elements import DiffPupilOptic, DiffImageOptic, DiffDetector, DiffOpticalSystem
+from optical_elements import DiffPupilOptic, DiffImageOptic, BabinetImageOptic, DiffDetector, DiffOpticalSystem
 import astropy.units as u 
 import os 
 import json
@@ -210,7 +210,7 @@ def generate_STPSF_model_params(stpsf_instrument, spec_type='A1V', catalog_spec=
     else:
         return None
 
-def assemble_JWST_NIRCam_coron(data_dir,num_det_px,psf_pixel_scale=0.062424185,diameter = 6.603464, DEVICE='cuda'):
+def assemble_JWST_NIRCam_coron(data_dir,num_det_px,psf_pixel_scale=0.062424185,diameter = 6.603464, DEVICE='cuda', fpm_file=None):
     """
     Assemble a FLIP NIRCam coron model, given some model parameters.
     Again, quite hard coded:
@@ -218,6 +218,11 @@ def assemble_JWST_NIRCam_coron(data_dir,num_det_px,psf_pixel_scale=0.062424185,d
         This argument must be the same as folder_to_save in the function above. 
     - psf_pixel_scale: Must match the STPSF model: 0.062424185 if channel == 'long'; half of that if 'short'.
         TODO: Clean this up to get pixel scale automtically from STPSF insturment, maybe with a wrapper 
+    - fpm_file: focal plane mask file (.npz) applied through Babinet's principle (BabinetImageOptic) in place of the STPSF
+        mask in data_dir. It holds `conjugate_mask`, 1 - transmission on a square grid with the optical axis on the centre
+        sample, and its sample spacing on the sky `d_arcsec`. It has no mount (ND squares, holder).
+        data/coron_conjugate_masks has MASK335R_smooth_593.npz (stpsf's profile) and MASK335R_real_593.npz, both at a
+        mask scale of 593.336 um/arcsec.
     """
     
     # Set up physical model for the observation being optimized on: load mask designs, known aberrations, etc.
@@ -257,7 +262,12 @@ def assemble_JWST_NIRCam_coron(data_dir,num_det_px,psf_pixel_scale=0.062424185,d
     # 4. NIRCam detector: Projects onto detector with MFT, and applies shifts, BFE, flat fields, etc.
 
     JWST_primary = DiffPupilOptic(name='JWSTPrimary',opd=entrance_OPD, amplitude=aperture)
-    NIRCam_FPM = DiffImageOptic(name='NIRCam coron focal plane mask',amplitude=fpm)
+    if fpm_file is None:
+        NIRCam_FPM = DiffImageOptic(name='NIRCam coron focal plane mask',amplitude=fpm)
+    else:
+        mask_file = np.load(fpm_file)
+        NIRCam_FPM = BabinetImageOptic(mask_file['conjugate_mask'], arcsec2rad(float(mask_file['d_arcsec'])), wlen_weights[0].cpu().numpy(), true_pixel_scale, npixels,
+                                       name='NIRCam coron focal plane mask', device=DEVICE)
     NIRCam_Lyot = DiffPupilOptic(name='NIRCamLyotstop',opd=nircam_OPD, amplitude=lyot)
 
     # Big TODO:
