@@ -737,8 +737,8 @@ if __name__ == "__main__":
                     residual = est_residual_obs.detach().cpu().numpy()
                     if args.sci_targ_name == 'HIP65426':
                         if args.sci_targ_name == 'HIP65426': # Known position of HIP 65426 b
-                            x_pos, y_pos = -7.2 * psf_pixel_scale_arcsec, 11 * psf_pixel_scale_arcsec # hand tuned for HIP 65426 in the pre-rotated frame
-                            sourcemaskrad =1.3
+                            x_pos, y_pos = -8 * psf_pixel_scale_arcsec, 11 * psf_pixel_scale_arcsec # hand tuned for HIP 65426 in the pre-rotated frame
+                            sourcemaskrad =1.4
                         residual = np.squeeze(residual)
                         if residual.ndim == 2:
                             myres = residual
