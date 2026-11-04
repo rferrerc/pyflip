@@ -2,6 +2,8 @@
 
 Software submission for paper manuscript. 
 
+A Python package with documentation will be released a few weeks after publication.
+
 # System requirements
 
 1. Software dependencies used and where the code was tested on (with version numbers):
