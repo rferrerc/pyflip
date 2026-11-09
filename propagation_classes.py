@@ -181,11 +181,47 @@ class BroadbandWavefront(nn.Module):
 
     def forward_fpm(self, phasors, layer, oversample=1):
         npixels_in = self.npixels
-        phasors = self.propagate(phasors, pad=oversample) # up to here it's fine!
-        new_phasor = phasors * layer
-        new_phasor = torch.fft.fft2(torch.fft.fftshift(new_phasor, dim=[-2, -1]))
-        new_phasor = crop_to(new_phasor, npixels_in)
 
+        # Preserve original operations for odd dimensions.
+        actual_padding = (
+            (npixels_in * (oversample - 1)) // 2
+            if oversample > 1
+            else 0
+        )
+
+        target_h = phasors.shape[-2] + 2 * actual_padding
+        target_w = phasors.shape[-1] + 2 * actual_padding
+
+        if target_h % 2 or target_w % 2:
+            phasors = self.propagate(
+                phasors, pad=oversample
+            )
+            new_phasor = phasors * layer
+            new_phasor = torch.fft.fft2(
+                torch.fft.fftshift(
+                    new_phasor, dim=[-2, -1]
+                )
+            )
+        else:
+            if oversample > 1:
+                pixels = (
+                    npixels_in * (oversample - 1)
+                ) // 2
+                phasors = torch.nn.functional.pad(
+                    phasors, (pixels,) * 4
+                )
+
+            shifted_mask = torch.fft.fftshift(
+                layer, dim=[-2, -1]
+            )
+
+            new_phasor = torch.fft.fft2(
+                torch.fft.ifft2(phasors) * shifted_mask
+            )
+
+        new_phasor = crop_to(
+            new_phasor, npixels_in
+        )
         return new_phasor
 
     def forward_wfes(self, phasors, layer, wlens):
