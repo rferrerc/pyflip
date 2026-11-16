@@ -20,6 +20,8 @@ class ShiftModule(nn.Module):
     ----------
     x_shift, y_shift : torch.nn.Parameter
         Shift [samples], positive towards larger column / row index.
+        For illustration, if plotted with plt.imshow(mask, origin='lower'), positive x_shift means
+        shifting the array to the right, and positive y_shift shiftings the array upwards.
     rotation : torch.nn.Parameter
         Rotation [deg], positive from +x towards +y.
     scale : torch.nn.Parameter
@@ -192,7 +194,7 @@ class PerMirrorZernikes(nn.Module):
             ordered_segment_centers.append([center_x, center_y])
         
         self.ordered_segment_masks = torch.stack(ordered_segment_masks).to(DEVICE)
-        self.ordered_segment_centers = torch.tensor(ordered_segment_centers, dtype=torch.float64).to(DEVICE)
+        self.ordered_segment_centers = torch.tensor(ordered_segment_centers, dtype=torch.float32).to(DEVICE)
 
         per_mirror_zernike_basis = torch.zeros(num_zernikes,1024,1024).to(DEVICE) # this should have shape (N_zernikes, 1024, 1024) # bruhhh
 
@@ -389,7 +391,7 @@ class PTT_OPD(nn.Module):
             ordered_segment_centers.append([center_x, center_y])
         
         self.ordered_segment_masks = torch.stack(ordered_segment_masks).to(DEVICE)
-        self.ordered_segment_centers = torch.tensor(ordered_segment_centers, dtype=torch.float64).to(DEVICE)
+        self.ordered_segment_centers = torch.tensor(ordered_segment_centers, dtype=torch.float32).to(DEVICE)
 
     def get_res(self):
         total_opd = torch.zeros_like(self.coords_grid_x)
