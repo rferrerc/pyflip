@@ -6,6 +6,155 @@ from pyklip.klip import meas_contrast
 import json
 import torch.nn.functional as F
 from pyklip.fakes import gaussfit2d
+import astropy.io.fits as fits 
+import torch.nn as nn
+import copy
+import torch 
+import matplotlib.pyplot as plt 
+from pyklip.klip import nan_gaussian_filter
+
+
+def track_SNR(est_residual_obs, curr_iter, track_locs, track_fluxes=None,app_size=5., ann_width=6.5, mask_name=None, vis_dir_iterations='vis_iters', snr_smooth_sigma=0.,psf_pixel_scale_arcsec=0.062, px_mask_numpy=None, save_plot=True):
+    # Now, track the signal loss and SNR of injected planets (and real planets, if applicable)
+    app_size = app_size * psf_pixel_scale_arcsec
+    ann_width = ann_width * psf_pixel_scale_arcsec
+    # Exclude bad pixels from SNR calculation
+    if px_mask_numpy is not None:
+        px_mask_nanned = np.where(px_mask_numpy == 0., np.nan, px_mask_numpy)
+    else:
+        px_mask_nanned = 1.
+
+    # For convenience, if we have a MASKLWB, we also have to omit the region along the bar from the SNR
+    if 'MASKLWB' in mask_name:
+        if px_mask_nanned.shape[-1] == 80:
+            # We only have a pre-generated pixel map for the 80x80 case
+            package_directory = os.path.dirname(os.path.abspath(__file__))
+            mask_along_bar = package_directory+f'/data/common_masks/mask_along_bar.npy'
+            mask_along_bar = np.load(mask_along_bar)
+            mask_along_bar_nanned = np.where(mask_along_bar == 0., np.nan, mask_along_bar)
+            px_mask_nanned+=mask_along_bar_nanned # Combine into a single NAN mask
+
+        else:
+            print('We should exclude the region along the bar from SNR calculation, but only 80x80 mask is implemented for now')
+            print('Omitting')
+
+    residual = est_residual_obs
+
+    masked_residual = residual * px_mask_nanned
+    
+    curr_iter_snrs, curr_iter_signal_blob_peak = [], []
+    #Check SNRs of known synthetic planets that were injected
+    for j, loc in enumerate(track_locs):
+        # Every element in track_locs must have this structure: fakes = [{'pos_x_px':10., 'pos_y_px': 0.}]
+        xpos, ypos = loc['pos_x_px']*psf_pixel_scale_arcsec, loc['pos_y_px']*psf_pixel_scale_arcsec
+
+        # Extract peak of injection without smoothing, for a good tracker of signal loss
+        _, annulus, signal_blob, peak_blob = calc_snr(masked_residual[0], xpos, ypos,app_size,np.sqrt(xpos**2 + ypos**2),return_signal_peak=True, width=ann_width)
+
+        # Smooth (optionally) when computing actual SNR
+        curr_snr, _, _ = calc_snr(masked_residual[0], xpos, ypos,app_size,np.sqrt(xpos**2 + ypos**2), sigma_kernel=snr_smooth_sigma, width=ann_width)
+
+        curr_iter_snrs.append(curr_snr)
+        curr_iter_signal_blob_peak.append(peak_blob)
+        if save_plot:
+            # Create folder to save everything in
+            if not os.path.isdir(vis_dir_iterations):
+                os.makedirs(vis_dir_iterations, exist_ok=True)
+
+            # Create sub-folder for current iteration saves
+            vis_dir_iterations_current = os.path.join(vis_dir_iterations, 'iter'+str(curr_iter))
+            if not os.path.isdir(vis_dir_iterations_current):
+                os.makedirs(vis_dir_iterations_current, exist_ok=True)
+                
+            plt.figure(figsize=[15,10])
+            plt.subplot(231)
+            plt.imshow(residual[0], origin='lower')
+            plt.title(f'Sum, peak = {np.nansum(residual[0]):.2f},{np.nanmax(residual[0]):.2f} (orig)')
+            plt.subplot(232)
+            plt.imshow(masked_residual[0], origin='lower', vmin=-10)
+            plt.subplot(234)
+            plt.imshow(annulus, origin='lower')
+            plt.title(f'Stddev = {np.nanstd(annulus):.2f} (annulus synthetic)')
+            plt.subplot(235)
+            plt.imshow(signal_blob, origin='lower')
+            if track_fluxes is not None:
+                plt.title(f'Sum, peak = {np.nansum(signal_blob):.2f},{peak_blob:.2f},\n pos x, pos y, flux input ={loc["pos_x_px"]:.2f},{loc["pos_y_px"]:.2f},{track_fluxes[j]:.2f}')
+            else:
+                plt.title(f'Sum, peak = {np.nansum(signal_blob):.2f},{peak_blob:.2f},\n pos x, pos y, flux input ={loc["pos_x_px"]:.2f},{loc["pos_y_px"]:.2f}')
+            whole_annulus = np.where(~np.isnan(signal_blob), signal_blob, annulus)
+            plt.subplot(236)
+            plt.imshow(whole_annulus, origin='lower')
+            plt.title(f'Whole annulus. \n Peak, mean, stddev = {np.nanmax(whole_annulus):.2f}, {np.nanmean(whole_annulus):.2f}, {np.nanstd(whole_annulus):.2f}')
+            plt.suptitle(f'Curr SNR: {curr_snr:.2f}')
+            plt.tight_layout()
+            plt.savefig(f'{vis_dir_iterations_current}/vis_measurement_INJECTED_iter{curr_iter}_comp{j}.png')
+            plt.close()
+
+    curr_iter_snrs = np.array(curr_iter_snrs) # Array with current SNRs of all sources tracked
+    curr_iter_signal_blob_peak = np.array(curr_iter_signal_blob_peak) # Array with current peak of all sources tracked
+    if track_fluxes is not None:
+        signal_losses = curr_iter_signal_blob_peak/track_fluxes # Array with current signal loss, relative to initial flux
+    else:
+        signal_losses = np.array([None])
+
+    return curr_iter_signal_blob_peak, signal_losses, curr_iter_snrs
+
+
+def hardcoded_match_flux(psf_model,obs_im,px_mask, wavefront, windsize=30, DEVICE='cuda'):
+    with torch.no_grad():
+        fluxwindsize = windsize
+        maskslice = px_mask[:,(int(psf_model.shape[-1]/2) - int(fluxwindsize/2)):(int(psf_model.shape[-1]/2) + int(fluxwindsize/2)),(int(psf_model.shape[-1]/2) - int(fluxwindsize/2)):(int(psf_model.shape[-1]/2) + int(fluxwindsize/2))]
+        tot_flux_pred = (maskslice*psf_model[:,(int(psf_model.shape[-1]/2) - int(fluxwindsize/2)):(int(psf_model.shape[-1]/2) + int(fluxwindsize/2)),(int(psf_model.shape[-1]/2) - int(fluxwindsize/2)):(int(psf_model.shape[-1]/2) + int(fluxwindsize/2))]).sum()
+        tot_flux_target = (maskslice*obs_im[:,(int(obs_im.shape[-1]/2) - int(fluxwindsize/2)):(int(obs_im.shape[-1]/2) + int(fluxwindsize/2)),(int(obs_im.shape[-1]/2) - int(fluxwindsize/2)):(int(obs_im.shape[-1]/2) + int(fluxwindsize/2))]).sum()
+        flux_mismatch_ratio = tot_flux_target / tot_flux_pred
+        wavefront.flux_correction.data *=flux_mismatch_ratio.to(DEVICE)
+    return wavefront
+
+def inject_fake_planets(obs,obs_noise_map, wavefront_object, optsys_object,fakes, flux_n_5_sigma, smooth_sigma_for_flux=0., pixelscale=0.062,DEVICE='cuda', **kwargs):
+    """
+    Utility function to inject fake planets to an observation.
+    obs = observation (numpy array)
+    smooth_sigma_for_flux = Smoothness used to compute the SNR, to ensure that flux_n_5_sigma of the injected planet is actually N times the 5 sigma detection after smoothing.
+    """
+
+    # TODO: Get rid of pixelscale keyword and just extract it from something else (e.g. our optsys_object)
+
+    fluxes = generate_flux_rel_5sigma_fundamental_noise(fakes,obs_noise_map,flux_n_5_sigma,smooth_sigma_px=smooth_sigma_for_flux, pixelscale=pixelscale, **kwargs)
+    
+    # For simplicity, use the same optical system and such to generate the fakes; can create a new one if you want 
+    fake_planets = []
+    original_injected_peaks = []
+    with torch.no_grad(): # Don't compute gradient during these operations
+        planet_wavefront = copy.deepcopy(wavefront_object)
+        for j,planet in enumerate(fakes):
+            offset_planet = nn.Parameter(torch.FloatTensor([planet['pos_x_px'] * arcsec2rad(pixelscale), planet['pos_y_px'] * arcsec2rad(pixelscale)]))
+            offset_planet = offset_planet.to(DEVICE)
+            planet_wavefront.angles = nn.Parameter(offset_planet)
+            planet_psf = optsys_object(planet_wavefront)
+            planet_psf = planet_psf.detach().cpu().numpy() # turn to Numpy array for some operations
+            smoothed_injected = nan_gaussian_filter(np.squeeze(planet_psf), smooth_sigma_for_flux) # smooth injection with sigma=1 pixel
+            
+            normaltosmooth = np.nanmax(planet_psf) / np.nanmax(smoothed_injected)
+            # smoothed_conversiontorequiredflux = np.nanmax(smoothed_injected) * fluxes[j] # Dividing the smoothed planet by this number gives the correct flux
+            curr_pred_planet_scaled = planet_psf / np.nanmax(planet_psf) * fluxes[j] * normaltosmooth# So we divide the pre-smoothed planet by the same flux conversion factor
+            curr_pred_planet_scaled = curr_pred_planet_scaled[None] # TODO: check if I need this for the right shape
+            fake_planets.append(curr_pred_planet_scaled)
+            original_injected_peaks.append(np.nanmax(curr_pred_planet_scaled)) # save peak flux of actual injected planet
+            
+    fake_planets = np.squeeze(np.array(fake_planets)) # check if I need this for the shape
+
+    if fake_planets.ndim > 2:
+        fake_planets_all = np.nansum(fake_planets, axis=0) # If injected many planets in the same image, combine them into a single image to add to the observation
+    else:
+        fake_planets_all = fake_planets
+    
+    fake_planets_all = fake_planets_all[None]
+
+    # Inject
+    obs+=fake_planets_all
+
+    return obs, original_injected_peaks
+
 
 def shift_image_subpixel(image: torch.Tensor, shift_x: float = -0.12, shift_y: float = -0.11) -> torch.Tensor:
     """
@@ -107,38 +256,51 @@ def weighted_smooth_l1_loss(pred, obs, noise, beta=1.0, reduction='mean'):
     else:
         return weighted_loss
 
-def load_data(data_dir, num_wl=None, oversample=None):
-    basic_masks_dir = os.path.join(data_dir, 'masks_1024')
 
-    aperture = np.load(f'{basic_masks_dir}/primary_transmission_1024.npy')
-    aperture = np.flip(aperture, axis=0)
-    lyot = np.load(f'{basic_masks_dir}/circlyotstop_transmission_1024.npy')
-    if num_wl is not None or oversample is not None:
-        data_dir = os.path.join(data_dir, f'npix_{int(1024*oversample)}_num_wl_{int(num_wl)}')
-    # else:
-        
-        # basic_masks_dir = os.path.join(data_dir, f'mask_{int(1024*oversample)}')
+def generate_flux_rel_5sigma_fundamental_noise(fakes,noise_map,nsigma, mask_name='MASK335R', pixelscale=0.062, smooth_sigma_px=0.,annulus_size=4):
+    """
+    Compute what the flux of the planet should be, assuming we want it to be N times the 5 sigma fundamental noise limit at its separation.
+    """
+    
+    # In pixels relative to center of the image
+    positions = [[planet['pos_x_px'], planet['pos_y_px']] for planet in fakes]
 
-        # aperture = np.load(f'{basic_masks_dir}/primary_transmission_1024.npy')
-        # aperture = np.flip(aperture, axis=0)
-        # lyot = np.load(f'{basic_masks_dir}/circlyotstop_transmission_1024.npy')
+    npixels = noise_map.shape[-1]
 
-    # WAVELENGTH DEPENDENCE
+    noise_realization = np.random.normal(loc=0.0, scale=noise_map, size=noise_map.shape)
+    noise_realization = np.squeeze(noise_realization)
+    noise_curve_seps, noise_curve_fluxes = meas_contrast(noise_realization, 0, int(npixels/2), annulus_size, low_pass_filter=smooth_sigma_px)
+    if mask_name is not None:
+        package_directory = os.path.dirname(os.path.abspath(__file__))
+        mask_transmission_csv = package_directory+f'/data/coron_transmission_csvs/{mask_name}.csv'
+        try:
+            instrument_throughput = np.genfromtxt(mask_transmission_csv, delimiter=',')
+        except FileNotFoundError:
+            raise FileNotFoundError('Valid mask names are MASK210R, MASK335R, MASK430R, MASKLWB_F250M, MASKLWB_F480M, MASKLWB_NARROW, MASKLWB_F182M, MASKLWB_F212N')
+    else:
+        # assume no mask is used, so uniform throughput = 1
+        seps = np.linspace(0,5,100)
+        thr = np.ones_like(seps)
+        instrument_throughput = np.vstack([seps,thr]).T
 
-    wlens_weights = np.load(os.path.join(data_dir, 'wlens_weights', 'lambda_weights.npy'))
-    fpm, nircam_opd = [], []
-    for i in range(len(wlens_weights[0])):
-        currfpm = np.load(f'{data_dir}/mask335r_transmissions/mask335r_transmission_{i}.npy')
-        curr_nircamopd = np.load(f'{data_dir}/fov_wl_nircam_opds/fov_wl_nircam_opd_{i}.npy')
-        fpm.append(currfpm)
-        nircam_opd.append(curr_nircamopd)
+    # noise_curve_seps is always non-negative
+    contrast_new_test_weighing = np.interp(noise_curve_seps * pixelscale,instrument_throughput[:,0], instrument_throughput[:,1],left=0., right=1.)
+    noise_curve_fluxes_wthroughput = noise_curve_fluxes / contrast_new_test_weighing
 
-    fpm = np.array(fpm)
-    nircam_opd = np.array(nircam_opd)
+    fluxes = []
 
-    return aperture, lyot, fpm, nircam_opd, wlens_weights
+    for position in positions:
+        fivesigma_flux = np.interp(np.sqrt(position[0]**2 + position[1]**2),noise_curve_seps, noise_curve_fluxes_wthroughput)
+        #onesigma_flux = fivesigma_flux / 5. # Not quite accurate since N sigma significance is not linear with flux, 
+        # So instead, we just stipulate now that N is the factor relative to the 5 sigma fundamental noise
+        # e.g., N=1 is a 5 sigma detection, N=2 is twice the brightness of a 5 sigma detection, but not necessarily a 10 sigma detection.
+        # If we want something linear, use SNR instead (i.e., not using the small number statistics correction from Mawet 2014).
 
-def generate_positions_sigma(N, nsigma,noise_map, npixels,scitargname=None, inj_pos=None, uniform='cartesian',data_dir='datadir'):
+        fluxes.append(fivesigma_flux*nsigma)
+    
+    return fluxes
+
+def generate_positions_sigma(N, nsigma,noise_map, npixels, inj_pos=None, uniform='cartesian',data_dir='datadir'):
     # Noise map must already be "nanned" with the bad pixel map
     # First generate the N samples
     samples = []
@@ -510,18 +672,18 @@ def rad2arcsec(values):
     return values * (3600 * 180) / np.pi
 
 
-def mask_annulus(im, radius,width=0.3):
+def mask_annulus(im, radius,psf_pixel_scale = 0.062424185,width=0.3):
     size = im.shape[-1]
-    x = np.linspace(-int(size/2) * 0.062424185, int(size/2) * 0.062424185, size)
-    y = np.linspace(-int(size/2) * 0.062424185, int(size/2)* 0.062424185, size)
+    x = np.linspace(-int(size/2) * psf_pixel_scale, int(size/2) * psf_pixel_scale, size)
+    y = np.linspace(-int(size/2) * psf_pixel_scale, int(size/2)* psf_pixel_scale, size)
     mesh = np.meshgrid(x,y)
     annulus = np.where((mesh[0]**2 + mesh[1]**2 > (radius-width)**2)&(mesh[0]**2 + mesh[1]**2 < (radius+width)**2), im, np.nan)
     return annulus
 
-def circular_mask(im, peak_x,peak_y, rad_to_mask, value_to_mask, mask_inside=True):
+def circular_mask(im, peak_x,peak_y, rad_to_mask, value_to_mask,psf_pixel_scale = 0.062424185, mask_inside=True):
     size = im.shape[-1]
-    x = np.linspace(-int(size/2) * 0.062424185, int(size/2) * 0.062424185, size)
-    y = np.linspace(-int(size/2) * 0.062424185, int(size/2)* 0.062424185, size)
+    x = np.linspace(-int(size/2) * psf_pixel_scale, int(size/2) * psf_pixel_scale, size)
+    y = np.linspace(-int(size/2) * psf_pixel_scale, int(size/2)* psf_pixel_scale, size)
     mesh = np.meshgrid(x,y)
     if mask_inside:
         circlito = np.where(((mesh[0] - peak_x)**2 + (mesh[1]-peak_y)**2 < rad_to_mask**2), value_to_mask, im)
@@ -529,17 +691,8 @@ def circular_mask(im, peak_x,peak_y, rad_to_mask, value_to_mask, mask_inside=Tru
         circlito = np.where(((mesh[0] - peak_x)**2 + (mesh[1]-peak_y)**2 > rad_to_mask**2), value_to_mask, im)
     return circlito
 
-# def get_peak_in_circle(im, offset_x,offset_y, rad):
-#     origin_x, origin_y = im.shape[0]/2, im.shape[1]/2
-#     offset_x_pix, offset_y_pix = offset_x/0.063, offset_y/0.063
-#     peakpix_x, peakpix_y = origin_x + offset_x_pix, origin_y+offset_y_pix
-#     xcoords = np.arange(im.shape[-1])
-#     mesh = np.meshgrid(xcoords,xcoords)
-#     circlito = np.where(((mesh[0] - peakpix_x)**2 + (mesh[1]-peakpix_y)**2 < rad**2), im, np.nan)
-#     return circlito
 
-def calc_snr(im, offset_x,offset_y, rad_blob, rad_ann, width=0.2, blur_before_signal=False, blur_annulus=True, sigma_kernel=0.0,return_signal_peak=False):
-    psf_pixel_scale = 0.062424185
+def calc_snr(im, offset_x,offset_y, rad_blob, rad_ann,psf_pixel_scale = 0.062424185, width=0.2, blur_before_signal=False, blur_annulus=True, sigma_kernel=0.0,return_signal_peak=False):
     if not blur_annulus:
         positive_blob = circular_mask(im, offset_x,offset_y, rad_blob, np.nan, mask_inside=False)
     elif blur_before_signal:
@@ -555,11 +708,16 @@ def calc_snr(im, offset_x,offset_y, rad_blob, rad_ann, width=0.2, blur_before_si
     ygauss+=offset_y/psf_pixel_scale
     signal,_,_,_ = gaussfit2d(positive_blob, xgauss, ygauss, searchrad=5, guessfwhm=3, guesspeak=np.nanmax(positive_blob), refinefit=True)
 
-    positive_annulus = mask_annulus(im, rad_ann, width)
-
+    print('rad ann', rad_ann)
+    print('width', width)
+    print('im stddev', np.nanstd(im))
+    positive_annulus = mask_annulus(im, rad_ann, width=width)
+    print('positive annulus stddev', np.nanstd(positive_annulus))
+    print('positive blob stddev', np.nanstd(positive_blob))
     valid_annulus = np.where((~np.isnan(positive_annulus)&(np.isnan(positive_blob))), positive_annulus, np.nan)
 
     noise = np.nanstd(valid_annulus)
+    print('noise ',noise)
     if return_signal_peak:
         return signal/noise, valid_annulus, positive_blob, signal
     else:

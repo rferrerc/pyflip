@@ -5,33 +5,110 @@ import numpy as np
 import math 
 
 class ShiftModule(nn.Module):
-    def __init__(self, height, width, learn_scale=False):
-        super(ShiftModule, self).__init__()
-        self.x_shift = nn.Parameter(torch.zeros(1), requires_grad=True)
-        self.y_shift = nn.Parameter(torch.zeros(1), requires_grad=True)
-        y_coords, x_coords = torch.meshgrid(torch.arange(height), torch.arange(width), indexing='ij')
-        grid = torch.stack((x_coords, y_coords), dim=-1).float()
-        grid[:, :, 0] = 2.0 * grid[:, :, 0] / (width - 1) - 1.0
-        grid[:, :, 1] = 2.0 * grid[:, :, 1] / (height - 1) - 1.0
-        self.grid = nn.Parameter(grid[None], requires_grad=False)
-        self.rotation = nn.Parameter(torch.zeros(1), requires_grad=True)
-        self.scale = nn.Parameter(torch.ones(1), requires_grad=learn_scale)
+    """Shift, rotation and magnification of a mask about the grid centre, by bilinear resampling.
 
-    def forward(self, x):
-        grid = self.grid.clone().to(x.dtype) * self.scale
+    Parameters
+    ----------
+    height, width : int
+        Mask shape [samples].
+    learn_scale : bool, optional
+        Fit the magnification as well.
+    device : str or torch.device, optional
+        Device of the parameters and the sample grid.
 
-        cos_theta = torch.cos(self.rotation)
-        sin_theta = torch.sin(self.rotation)
-        rotation_matrix = torch.tensor([[cos_theta, -sin_theta], [sin_theta, cos_theta]]).to(x.device).to(x.dtype)
-        grid = torch.matmul(grid.view(-1, 2), rotation_matrix).view(1, x.shape[-2], x.shape[-1], 2)
+    Attributes
+    ----------
+    x_shift, y_shift : torch.nn.Parameter
+        Shift [samples], positive towards larger column / row index.
+        For illustration, if plotted with plt.imshow(mask, origin='lower'), positive x_shift means
+        shifting the array to the right, and positive y_shift shiftings the array upwards.
+    rotation : torch.nn.Parameter
+        Rotation [deg], positive from +x towards +y.
+    scale : torch.nn.Parameter
+        Magnification.
+    """
+    def __init__(self, height, width, learn_scale=False, device='cuda'):
+        super().__init__()
+        self.x_shift = nn.Parameter(torch.zeros(1, dtype=torch.float64, device=device))
+        self.y_shift = nn.Parameter(torch.zeros(1, dtype=torch.float64, device=device))
+        self.rotation = nn.Parameter(torch.zeros(1, dtype=torch.float64, device=device))
+        self.scale = nn.Parameter(torch.ones(1, dtype=torch.float64, device=device), requires_grad=learn_scale)
+        y, x = torch.meshgrid(torch.arange(height, dtype=torch.float64, device=device) - (height - 1) / 2,
+                              torch.arange(width, dtype=torch.float64, device=device) - (width - 1) / 2, indexing='ij')
+        self.register_buffer('x', x)
+        self.register_buffer('y', y)
 
-        grid[..., 0] = grid[..., 0] + self.x_shift
-        grid[..., 1] = grid[..., 1] + self.y_shift
+    def forward(self, mask):
+        """Moved mask, with the shape (..., height, width) and dtype of mask."""
+        height, width = mask.shape[-2:]
+        angle = torch.deg2rad(self.rotation)
+        cos, sin = torch.cos(angle), torch.sin(angle)
+        rot_matrix = torch.stack((torch.cat((cos, sin)), torch.cat((-sin, cos))))
+        positions = torch.stack((self.x - self.x_shift, self.y - self.y_shift), dim=-1)
+        x_in, y_in = (positions @ rot_matrix.T / self.scale).unbind(-1)
+        grid = torch.stack((x_in * 2 / width, y_in * 2 / height), dim=-1)
+        flat = mask.reshape(-1, 1, height, width).to(torch.float64)
+        out = F.grid_sample(flat, grid.expand(len(flat), -1, -1, -1), mode='bilinear', padding_mode='zeros', align_corners=False)
+        return out.reshape(mask.shape).to(mask.dtype)
 
-        out = F.grid_sample(x[None], grid, mode='bilinear', padding_mode='reflection', align_corners=False)
+class DetSubPixShift(nn.Module):
+    def __init__(self, shift_x, shift_y):
+        super().__init__()
+        self.shift_x = shift_x #nn.Parameter(torch.zeros(1), requires_grad=True)
+        self.shift_y = shift_y #nn.Parameter(torch.zeros(1), requires_grad=True)
 
-        return out[0]
+    def forward(self, image):
+        if image.dim() == 3:
+            image = image.unsqueeze(0)  # Add batch dimension
+
+        N, C, H, W = image.shape
+
+        # Create normalized 2D affine matrix for translation
+        theta = torch.tensor([[
+            [1, 0, -2 * self.shift_x / W],  # x shift
+            [0, 1, -2 * self.shift_y / H]   # y shift
+        ]], dtype=image.dtype, device=image.device)
+
+        # Repeat theta for batch
+        theta = theta.expand(N, -1, -1)
+
+        # Create grid and sample
+        grid = F.affine_grid(theta, size=image.size(), align_corners=False)
+        shifted_image = F.grid_sample(image, grid, mode='bicubic', padding_mode='border', align_corners=False)
+
+        return shifted_image.squeeze(0) if shifted_image.size(0) == 1 else shifted_image  
+
+def shift_image_subpixel(image: torch.Tensor, shift_x: float = -0.12, shift_y: float = -0.11) -> torch.Tensor:
+    """
+    Shift an image by sub-pixel amounts using bilinear interpolation.
     
+    Args:
+        image (torch.Tensor): Image tensor of shape (C, H, W) or (N, C, H, W)
+        shift_x (float): Amount to shift in the x-direction (positive = right)
+        shift_y (float): Amount to shift in the y-direction (positive = down)
+
+    Returns:
+        torch.Tensor: Shifted image of same shape
+    """
+    if image.dim() == 3:
+        image = image.unsqueeze(0)  # Add batch dimension
+
+    N, C, H, W = image.shape
+
+    # Create normalized 2D affine matrix for translation
+    theta = torch.tensor([[
+        [1, 0, -2 * shift_x / W],  # x shift
+        [0, 1, -2 * shift_y / H]   # y shift
+    ]], dtype=image.dtype, device=image.device)
+
+    # Repeat theta for batch
+    theta = theta.expand(N, -1, -1)
+
+    # Create grid and sample
+    grid = F.affine_grid(theta, size=image.size(), align_corners=False)
+    shifted_image = F.grid_sample(image, grid, mode='bicubic', padding_mode='border', align_corners=False)
+
+    return shifted_image.squeeze(0) if shifted_image.size(0) == 1 else shifted_image    
 
 class GridOffsetModule(nn.Module):
     def __init__(self, height, width):
@@ -51,10 +128,10 @@ class GridOffsetModule(nn.Module):
         return out
     
 
-class FlatFieldingModule(nn.Module):
-    def __init__(self, height, width):
+class LinearChromaticTiltOPD(nn.Module):
+    def __init__(self, height, width,delta_slope_interpt=[0.,0.]):
         super().__init__()
-        grid = torch.ones((height, width))
+        grid = torch.zeros((height, width))
         self.grid = nn.Parameter(grid[None], requires_grad=True)
 
     def get_res(self):
@@ -65,6 +142,25 @@ class FlatFieldingModule(nn.Module):
         res = self.grid
         if x is None:
             return res
+        out = res + x
+        return out
+    
+
+class FlatFieldingModule(nn.Module):
+    def __init__(self, height, width, device='cuda'):
+        super().__init__()
+        grid = torch.ones((height, width)).to(device)
+        self.grid = nn.Parameter(grid[None], requires_grad=True)
+
+    def get_res(self):
+        res = self.grid
+        return res
+
+    def forward(self, x=None):
+        res = self.grid
+        if x is None:
+            return res
+
         out = res * x
         return out
     
@@ -98,7 +194,7 @@ class PerMirrorZernikes(nn.Module):
             ordered_segment_centers.append([center_x, center_y])
         
         self.ordered_segment_masks = torch.stack(ordered_segment_masks).to(DEVICE)
-        self.ordered_segment_centers = torch.tensor(ordered_segment_centers, dtype=torch.float64).to(DEVICE)
+        self.ordered_segment_centers = torch.tensor(ordered_segment_centers, dtype=torch.float32).to(DEVICE)
 
         per_mirror_zernike_basis = torch.zeros(num_zernikes,1024,1024).to(DEVICE) # this should have shape (N_zernikes, 1024, 1024) # bruhhh
 
@@ -199,9 +295,9 @@ class PerMirrorZernikes(nn.Module):
     
 
 class OPDOffsetModule(nn.Module):
-    def __init__(self, height, width):
+    def __init__(self, height, width, device='cuda'):
         super().__init__()
-        grid = torch.zeros((1, height, width))
+        grid = torch.zeros((1, height, width)).to(device)
         self.grid = nn.Parameter(grid, requires_grad=True)
 
     def get_res(self):
@@ -295,7 +391,7 @@ class PTT_OPD(nn.Module):
             ordered_segment_centers.append([center_x, center_y])
         
         self.ordered_segment_masks = torch.stack(ordered_segment_masks).to(DEVICE)
-        self.ordered_segment_centers = torch.tensor(ordered_segment_centers, dtype=torch.float64).to(DEVICE)
+        self.ordered_segment_centers = torch.tensor(ordered_segment_centers, dtype=torch.float32).to(DEVICE)
 
     def get_res(self):
         total_opd = torch.zeros_like(self.coords_grid_x)
@@ -328,7 +424,7 @@ class LearnableGaussianBlur(nn.Module):
             raise ValueError("Input must have shape (1, 1, N, H, W)")
 
         sigma = torch.exp(self.log_sigma)
-        coords = torch.arange(self.kernel_size, dtype=torch.double, device=x.device) - self.kernel_size // 2
+        coords = torch.arange(self.kernel_size, dtype=x.dtype, device=x.device) - self.kernel_size // 2
         kernel_1d = torch.exp(-0.5 * (coords / sigma)**2)
         kernel_1d = kernel_1d / kernel_1d.sum()
 

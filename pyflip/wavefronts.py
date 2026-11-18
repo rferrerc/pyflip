@@ -1,0 +1,77 @@
+import torch.nn as nn
+import torch
+import numpy as np 
+from pyflip.dl_utils import pixel_coords
+from pyflip.model_classes import FluxOffsetModule
+
+class BroadbandWavefront(nn.Module):
+    def __init__(self, wavelength: list, peak_flux = None, angles = None, angles_offset=None, npixels = 1024, diameter = 6.603464, DEVICE='cuda'):
+        super().__init__()
+        self.wavelengths = nn.Parameter(torch.tensor(wavelength[0], dtype=torch.float32), requires_grad=False).to(DEVICE)
+        self.wl_weights = nn.Parameter(torch.tensor(wavelength[1], dtype=torch.float32), requires_grad=False).to(DEVICE)
+        self.wavenumbers = 2 * np.pi / self.wavelengths
+        self.npixels = npixels
+        self.diameter = diameter
+        if peak_flux is None:
+            self.peak_flux = nn.Parameter(torch.FloatTensor([1.]), requires_grad=True)
+        else: 
+            self.peak_flux = nn.Parameter(torch.FloatTensor([peak_flux]), requires_grad=True)
+
+        self.flux_correction = FluxOffsetModule() # TODO: check if this is better than tuning peak flux above
+
+        self.coordinates = nn.Parameter(pixel_coords(self.npixels, self.diameter).to(torch.float32), requires_grad=False)
+        if angles is None:
+            angles = torch.zeros(2).to(DEVICE)
+        else:
+            angles = angles.to(DEVICE)
+        self.angles = nn.Parameter(angles)
+        if angles_offset is None:
+            angles_offset = torch.zeros(2).to(DEVICE)
+        else:
+            angles_offset = angles_offset.to(DEVICE)
+
+        self.angles_offset =nn.Parameter(angles_offset) # Now angles_offset is a property of the wavefront: needs to be on the DEVICE! # TODO: look into this
+        self.reset()
+    # TODO: some utility functions to convert from radians to arcsec and such
+    def reset(self):
+        if hasattr(self, 'amplitude'):
+            self.amplitude.data = torch.ones_like(self.amplitude.data) / self.npixels**1
+            self.phase.data = torch.zeros_like(self.phase.data)
+        else:
+            self.amplitude = nn.Parameter(torch.ones((1, self.npixels, self.npixels), dtype=torch.float32) / self.npixels**1)
+            self.phase = nn.Parameter(torch.zeros((1, self.npixels, self.npixels), dtype=torch.float32))
+
+    def get_phasors(self):
+        opd = self.get_tilts_opd()
+        return self.amplitude * torch.exp(1j * (self.phase + opd))
+
+    def get_tilts_opd(self):
+        if self.angles_offset is not None:
+            opd = -((self.angles + self.angles_offset)[:, None, None] * self.coordinates).sum(0)
+        else:
+            opd = -(self.angles[:, None, None] * self.coordinates).sum(0)
+        opd = opd[None] * self.wavenumbers.unsqueeze(1).unsqueeze(2) 
+        
+        return opd
+
+    def tilt(self, angles):
+        """
+        Tilts the wavefront by the (x, y) angles.
+
+        Parameters
+        ----------
+        angles : Array, radians
+            The (x, y) angles by which to tilt the wavefront.
+
+        Returns
+        -------
+        wavefront : Wavefront
+            The tilted wavefront.
+        """
+        coords = self.coordinates
+        opd = -(angles[:, None, None] * coords).sum(0)
+        opd = opd[None]
+        return self.add_opd(opd)
+
+    def add_opd(self, opd):
+        self.phase.data = self.phase.data + self.wavenumbers * opd
