@@ -14,9 +14,10 @@ import matplotlib.pyplot as plt
 from pyklip.klip import nan_gaussian_filter
 
 
-def track_SNR(est_residual_obs, curr_iter, track_locs, track_fluxes,app_size=0.3, mask_name=None, vis_dir_iterations='vis_iters', snr_smooth_sigma=0.,psf_pixel_scale_arcsec=0.062, px_mask_numpy=None, save_plot=True):
+def track_SNR(est_residual_obs, curr_iter, track_locs, track_fluxes=None,app_size=5., ann_width=6.5, mask_name=None, vis_dir_iterations='vis_iters', snr_smooth_sigma=0.,psf_pixel_scale_arcsec=0.062, px_mask_numpy=None, save_plot=True):
     # Now, track the signal loss and SNR of injected planets (and real planets, if applicable)
-    
+    app_size = app_size * psf_pixel_scale_arcsec
+    ann_width = ann_width * psf_pixel_scale_arcsec
     # Exclude bad pixels from SNR calculation
     if px_mask_numpy is not None:
         px_mask_nanned = np.where(px_mask_numpy == 0., np.nan, px_mask_numpy)
@@ -48,10 +49,10 @@ def track_SNR(est_residual_obs, curr_iter, track_locs, track_fluxes,app_size=0.3
         xpos, ypos = loc['pos_x_px']*psf_pixel_scale_arcsec, loc['pos_y_px']*psf_pixel_scale_arcsec
 
         # Extract peak of injection without smoothing, for a good tracker of signal loss
-        _, annulus, signal_blob, peak_blob = calc_snr(masked_residual[0], xpos, ypos,app_size,np.sqrt(xpos**2 + ypos**2),return_signal_peak=True)
+        _, annulus, signal_blob, peak_blob = calc_snr(masked_residual[0], xpos, ypos,app_size,np.sqrt(xpos**2 + ypos**2),return_signal_peak=True, width=ann_width)
 
         # Smooth (optionally) when computing actual SNR
-        curr_snr, _, _ = calc_snr(masked_residual[0], xpos, ypos,app_size,np.sqrt(xpos**2 + ypos**2), sigma_kernel=snr_smooth_sigma)
+        curr_snr, _, _ = calc_snr(masked_residual[0], xpos, ypos,app_size,np.sqrt(xpos**2 + ypos**2), sigma_kernel=snr_smooth_sigma, width=ann_width)
 
         curr_iter_snrs.append(curr_snr)
         curr_iter_signal_blob_peak.append(peak_blob)
@@ -88,7 +89,10 @@ def track_SNR(est_residual_obs, curr_iter, track_locs, track_fluxes,app_size=0.3
 
     curr_iter_snrs = np.array(curr_iter_snrs) # Array with current SNRs of all sources tracked
     curr_iter_signal_blob_peak = np.array(curr_iter_signal_blob_peak) # Array with current peak of all sources tracked
-    signal_losses = curr_iter_signal_blob_peak/track_fluxes # Array with current signal loss, relative to initial flux
+    if track_fluxes is not None:
+        signal_losses = curr_iter_signal_blob_peak/track_fluxes # Array with current signal loss, relative to initial flux
+    else:
+        signal_losses = np.array([None])
 
     return curr_iter_signal_blob_peak, signal_losses, curr_iter_snrs
 
@@ -147,54 +151,6 @@ def inject_fake_planets(obs,obs_noise_map, wavefront_object, optsys_object,fakes
     obs+=fake_planets_all
 
     return obs, original_injected_peaks
-
-
-
-def load_and_crop_data(filepath, num_det_px=80, coron_type='MASK335R', crop_params=None):
-    """
-    Utility function to load JWST data as FITS files and format them for FLIP.
-
-    Current automatic options are 'MASK335R' and 'MASKLWB_NARROW'.
-    """
-    obs = fits.open(filepath)
-    obs_image = obs[1].data
-    obs_noise = obs[2].data
-
-    coadded_image = np.mean(obs_image, axis=0)
-    coadded_image = np.squeeze(coadded_image) # I forget what the output shape is, so ensure a 2D array
-
-    coadded_noise = np.sqrt(np.sum(obs_noise**2, axis=0)) / len(obs_noise)
-    coadded_noise = np.squeeze(coadded_noise)
-
-    if coron_type == 'MASK335R':
-        # Assume 320x320 SUBARRAY
-        edge1y, edge2y = 160 - int(num_det_px/2), 160 + int(num_det_px/2)
-        edge1x, edge2x = 160 - int(num_det_px/2), 160 + int(num_det_px/2)
-        shift_y,shift_x = -14, 10
-    elif coron_type == 'MASKLWBAR_NARROW':
-        # Assume 400x256 SUBARRAY and the NARROW fiducial point override
-        edge1y, edge2y = 128 - int(num_det_px/2), 128 + int(num_det_px/2)
-        edge1x, edge2x = 200 - int(num_det_px/2), 200 + int(num_det_px/2)
-        shift_y,shift_x = -17, -64
-    elif crop_params is not None:
-        # Apply custom crop to the field of view; must be of the form (example for MASKLWB_NARROW):
-        # crop_params = {'hsize':400, 'vsize':256, 'shift_y': -17, 'shift_x': -64}
-        edge1y, edge2y = int(crop_params['vsize']/2) - int(num_det_px/2), int(crop_params['vsize']/2) + int(num_det_px/2)
-        edge1x, edge2x = int(crop_params['hsize']/2) - int(num_det_px/2), int(crop_params['hsize']/2) + int(num_det_px/2)
-        shift_y,shift_x = crop_params['shift_y'], crop_params['shift_x']
-    else:
-        raise ValueError('You must specify how to crop the observation')
-
-    # NOW WE DO NOT HAVE AN IMAGE CENTERED AT THE ARRAY, so use known coronagraph position to crop at the right pixels
-    real_im = coadded_image[(edge1y-shift_y):(edge2y-shift_y), (edge1x-shift_x):(edge2x-shift_x)]
-    real_im = real_im.astype(np.float32)
-
-    real_noise = coadded_noise[(edge1y-shift_y):(edge2y-shift_y), (edge1x-shift_x):(edge2x-shift_x)]
-    real_noise = real_noise.astype(np.float32)
-
-    # They are guaranteed to be 2D now, but we want 3D tensors, so add a dimension. TODO: clean up
-    
-    return real_im[None], real_noise[None]
 
 
 def shift_image_subpixel(image: torch.Tensor, shift_x: float = -0.12, shift_y: float = -0.11) -> torch.Tensor:
@@ -296,33 +252,6 @@ def weighted_smooth_l1_loss(pred, obs, noise, beta=1.0, reduction='mean'):
         return weighted_loss.sum()
     else:
         return weighted_loss
-
-def load_model_data(data_dir):
-    basic_masks_dir = os.path.join(data_dir, 'pupil_masks')
-
-    aperture = np.load(f'{basic_masks_dir}/primary_transmission.npy')
-    aperture = np.flip(aperture, axis=0)
-
-    sampledWFEs = np.load(f'{data_dir}/opds/observation_opd.npy')
-    sampledWFEs = np.flip(sampledWFEs, axis=0)[None]
-
-    lyot = np.load(f'{basic_masks_dir}/lyotstop_transmission.npy')
-
-    # WAVELENGTH DEPENDENCE
-    data_dir_wldep = os.path.join(data_dir, f'wavelength_dependents')
-
-    wlens_weights = np.load(os.path.join(data_dir_wldep, 'wlens_weights', 'lambda_weights.npy'))
-    fpm, nircam_opd = [], []
-    for i in range(len(wlens_weights[0])):
-        currfpm = np.load(f'{data_dir_wldep}/image_mask_transmissions/image_mask_transmission_{i}.npy')
-        curr_nircamopd = np.load(f'{data_dir_wldep}/fov_wl_nircam_opds/fov_wl_nircam_opd_{i}.npy')
-        fpm.append(currfpm)
-        nircam_opd.append(curr_nircamopd)
-
-    fpm = np.array(fpm)
-    nircam_opd = np.array(nircam_opd)
-
-    return aperture, lyot, fpm, nircam_opd, wlens_weights, sampledWFEs
 
 
 def generate_flux_rel_5sigma_fundamental_noise(fakes,noise_map,nsigma, mask_name='MASK335R', pixelscale=0.062, smooth_sigma_px=0.,annulus_size=4):
@@ -740,18 +669,18 @@ def rad2arcsec(values):
     return values * (3600 * 180) / np.pi
 
 
-def mask_annulus(im, radius,width=0.3):
+def mask_annulus(im, radius,psf_pixel_scale = 0.062424185,width=0.3):
     size = im.shape[-1]
-    x = np.linspace(-int(size/2) * 0.062424185, int(size/2) * 0.062424185, size)
-    y = np.linspace(-int(size/2) * 0.062424185, int(size/2)* 0.062424185, size)
+    x = np.linspace(-int(size/2) * psf_pixel_scale, int(size/2) * psf_pixel_scale, size)
+    y = np.linspace(-int(size/2) * psf_pixel_scale, int(size/2)* psf_pixel_scale, size)
     mesh = np.meshgrid(x,y)
     annulus = np.where((mesh[0]**2 + mesh[1]**2 > (radius-width)**2)&(mesh[0]**2 + mesh[1]**2 < (radius+width)**2), im, np.nan)
     return annulus
 
-def circular_mask(im, peak_x,peak_y, rad_to_mask, value_to_mask, mask_inside=True):
+def circular_mask(im, peak_x,peak_y, rad_to_mask, value_to_mask,psf_pixel_scale = 0.062424185, mask_inside=True):
     size = im.shape[-1]
-    x = np.linspace(-int(size/2) * 0.062424185, int(size/2) * 0.062424185, size)
-    y = np.linspace(-int(size/2) * 0.062424185, int(size/2)* 0.062424185, size)
+    x = np.linspace(-int(size/2) * psf_pixel_scale, int(size/2) * psf_pixel_scale, size)
+    y = np.linspace(-int(size/2) * psf_pixel_scale, int(size/2)* psf_pixel_scale, size)
     mesh = np.meshgrid(x,y)
     if mask_inside:
         circlito = np.where(((mesh[0] - peak_x)**2 + (mesh[1]-peak_y)**2 < rad_to_mask**2), value_to_mask, im)
@@ -760,8 +689,7 @@ def circular_mask(im, peak_x,peak_y, rad_to_mask, value_to_mask, mask_inside=Tru
     return circlito
 
 
-def calc_snr(im, offset_x,offset_y, rad_blob, rad_ann, width=0.2, blur_before_signal=False, blur_annulus=True, sigma_kernel=0.0,return_signal_peak=False):
-    psf_pixel_scale = 0.062424185
+def calc_snr(im, offset_x,offset_y, rad_blob, rad_ann,psf_pixel_scale = 0.062424185, width=0.2, blur_before_signal=False, blur_annulus=True, sigma_kernel=0.0,return_signal_peak=False):
     if not blur_annulus:
         positive_blob = circular_mask(im, offset_x,offset_y, rad_blob, np.nan, mask_inside=False)
     elif blur_before_signal:
