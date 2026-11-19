@@ -100,7 +100,7 @@ def track_SNR(est_residual_obs, curr_iter, track_locs, track_fluxes=None,app_siz
     return curr_iter_signal_blob_peak, signal_losses, curr_iter_snrs
 
 
-def hardcoded_match_flux(psf_model,obs_im,px_mask, wavefront, windsize=30, DEVICE='cuda'):
+def manual_match_flux(psf_model,obs_im,px_mask, wavefront, windsize=30, DEVICE='cuda'):
     with torch.no_grad():
         fluxwindsize = windsize
         maskslice = px_mask[:,(int(psf_model.shape[-1]/2) - int(fluxwindsize/2)):(int(psf_model.shape[-1]/2) + int(fluxwindsize/2)),(int(psf_model.shape[-1]/2) - int(fluxwindsize/2)):(int(psf_model.shape[-1]/2) + int(fluxwindsize/2))]

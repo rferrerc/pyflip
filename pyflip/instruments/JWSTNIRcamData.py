@@ -63,7 +63,7 @@ def load_and_crop_obs(filepath, num_det_px=80, coron_type='MASK335R', crop_param
     coadded_noise = np.sqrt(np.sum(obs_noise**2, axis=0)) / len(obs_noise)
     coadded_noise = np.squeeze(coadded_noise)
 
-    if coron_type == 'MASK335R':
+    if coron_type == 'MASK335R' and obs[0].header['CHANNEL']=='LONG':
         # Assume 320x320 SUBARRAY
         edge1y, edge2y = 160 - int(num_det_px/2), 160 + int(num_det_px/2)
         edge1x, edge2x = 160 - int(num_det_px/2), 160 + int(num_det_px/2)
