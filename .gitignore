@@ -11,3 +11,5 @@ HIP65426/priors/*.npy
 HIP65426/priors/model_setup/**/*.npy
 refactoring/priors/plots.py
 refactoring/vis_iters/
+# Sphinx generated documentation
+docs/build/
