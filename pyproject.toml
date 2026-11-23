@@ -23,5 +23,8 @@ dependencies = [
 readme = "README.md"
 license = "BSD-3-Clause"
 
-[tool.setuptools]
-packages = ["pyflip"]
+[tool.setuptools.dynamic]
+version = {attr = "pyflip.__version__"}
+
+[tool.setuptools.packages]
+find = {}
