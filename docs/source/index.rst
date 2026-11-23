@@ -8,8 +8,9 @@ pyFLIP documentation
 
 pyFLIP is a Python library implementing the FLIP framework (Physics-based Learning for Imaging Planets) for stellar PSF subtraction in exoplanet imaging.
 
-This documentation covers installation, usage, examples,
-and the complete API reference.
+The FLIP framework is described in detail in `Ferrer-Chavez et al. 2026 <https://www.nature.com/articles/s41586-026-11213-z>`_, and the code is hosted in `this Github repo. <https://github.com/rferrerc/pyflip/tree/main>`_
+
+This software is under active development, so expect significant changes between versions in the near future. This documentation is also being currently expanded.
 
 .. toctree::
    :maxdepth: 2
