@@ -16,7 +16,7 @@ and the complete API reference.
    :caption: User Guide
 
    installation
-   tutorials/quickstart
+   notebooks/quickstart
 
 
 .. toctree::
