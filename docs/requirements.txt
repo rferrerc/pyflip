@@ -15,3 +15,4 @@ stpsf==2.2.0
 stsynphot==1.5.1
 synphot==1.7.0
 furo
+-e .

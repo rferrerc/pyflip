@@ -4,10 +4,10 @@ pyflip.instruments package
 Submodules
 ----------
 
-pyflip.instruments.JWSTNIRcamData module
+pyflip.instruments.JWSTNIRCamData module
 ----------------------------------------
 
-.. automodule:: pyflip.instruments.JWSTNIRcamData
+.. automodule:: pyflip.instruments.JWSTNIRCamData
    :members:
    :show-inheritance:
    :undoc-members:

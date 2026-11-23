@@ -1,0 +1,774 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="pyflip" href="../api/modules.html"><link rel="prev" title="Installation" href="../installation.html">
+
+    <!-- Generated with Sphinx 9.0.4 and Furo 2025.12.19 -->
+        <title>Quickstart: basic tutorial - pyFLIP 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=acfd86a5" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../index.html"><div class="brand">pyFLIP 0.0.1 documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
+  
+  <span class="sidebar-brand-text">pyFLIP 0.0.1 documentation</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Quickstart: basic tutorial</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/modules.html">pyflip</a><input aria-label="Toggle navigation of pyflip" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../api/pyflip.html">pyflip package</a><input aria-label="Toggle navigation of pyflip package" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/pyflip.instruments.html">pyflip.instruments package</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="../_sources/notebooks/quickstart.ipynb.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="Quickstart:-basic-tutorial">
+<h1>Quickstart: basic tutorial<a class="headerlink" href="#Quickstart:-basic-tutorial" title="Link to this heading">¶</a></h1>
+<p>This notebook shows a minimal example of how to run FLIP on JWST/NIRCam coronagraphy data. More detailed examples on how to optimize PSF subtraction and sensitivity will be added soon.</p>
+<section id="Loading-data">
+<h2>Loading data<a class="headerlink" href="#Loading-data" title="Link to this heading">¶</a></h2>
+<p>First, we need the JWST observations that we will be processing. We need both a science target (where we will look for planets) and a reference target (used for model calibration and to improve the model initial state). Typically you can use as a reference target any observation that you would include in a PSF library for PSF subtraction.</p>
+<p>We have some utility functions to turn standard state 2 (calints.fits) JWST data products into FLIP-friendly format. This means that the data must already be processed with the first stages of the <a class="reference external" href="https://jwst-pipeline.readthedocs.io/en/stable/index.html">standard JWST pipeline</a>, including ramp fitting, conversion to physical units and bad pixel flagging. These steps can be easily run with <a class="reference external" href="https://spaceklip.readthedocs.io/en/latest/">spaceKLIP</a>.</p>
+<p>The utility functions turn these FITS files (including both the actual science data and the ERR array for noise estimation) into numpy arrays, which we then turn into pyTorch tensors. For simplicity, I have placed some observations from the JWST Early Release Science (ERS) program in this <a class="reference external" href="https://drive.google.com/drive/folders/1NH_ucrQnQbod5SDxy5MsJ9aSvSGkqU3V?usp=drive_link">Google Drive folder</a>. This includes the science target (HIP 65425, both observatory rolls; for this tutorial you can
+pick any single roll) and the reference target (HIP 68246, all nine dithers; for this tutorial you can pick any single dither). These have already been processed with spaceKLIP through the JWST pipeline, plus some extra bad pixel cleaning steps (though as we will see, this bad pixel cleaning may not be necessary).</p>
+<p>Let’s load and visualize the data first:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">astropy.io.fits</span> <span class="k">as</span> <span class="nn">fits</span>
+
+
+<span class="n">science_fits</span> <span class="o">=</span> <span class="s1">&#39;path/to/file/jw01386002001_0310a_00001_nrcalong_calints.fits&#39;</span>
+<span class="n">reference_fits</span> <span class="o">=</span> <span class="s1">&#39;path/to/file/jw01386001001_0310e_00001_nrcalong_calints.fits&#39;</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">[</span><span class="mi">10</span><span class="p">,</span><span class="mi">5</span><span class="p">])</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">121</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">fits</span><span class="o">.</span><span class="n">getdata</span><span class="p">(</span><span class="n">science_fits</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span> <span class="n">origin</span><span class="o">=</span><span class="s1">&#39;lower&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;HIP 65426 (science)&#39;</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">122</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">fits</span><span class="o">.</span><span class="n">getdata</span><span class="p">(</span><span class="n">reference_fits</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span> <span class="n">origin</span><span class="o">=</span><span class="s1">&#39;lower&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;HIP 68245 (reference)&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Text(0.5, 1.0, &#39;HIP 68245 (reference)&#39;)
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_quickstart_5_1.png" src="../_images/notebooks_quickstart_5_1.png" />
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fits</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">reference_fits</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s1">&#39;CHANNEL&#39;</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&#39;LONG&#39;
+</pre></div></div>
+</div>
+<p>Now, we will call our JWST NIRCam utility functions to format the data.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="c1"># If the environment variables are not set in bashrc, they need to be set here before we import anything else</span>
+<span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;STPSF_PATH&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;path/to/file/stpsf-data&quot;</span>
+<span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;PYSYN_CDBS&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;path/to/file/synphot-data&quot;</span>
+
+<span class="kn">from</span> <span class="nn">pyflip.instruments</span> <span class="kn">import</span> <span class="n">JWSTNIRCamData</span>
+
+<span class="n">num_det_px</span> <span class="o">=</span> <span class="mi">80</span>
+<span class="n">masktype</span> <span class="o">=</span> <span class="s1">&#39;MASK335R&#39;</span>
+<span class="n">DEVICE</span> <span class="o">=</span> <span class="s1">&#39;cuda&#39;</span> <span class="c1"># We will run this on a cuda-enabled GPU; you can change this to CPU but the code is less maintained for that case</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sci_numpy</span><span class="p">,</span> <span class="n">scinoise_numpy</span> <span class="o">=</span> <span class="n">JWSTNIRCamData</span><span class="o">.</span><span class="n">load_and_crop_obs</span><span class="p">(</span><span class="n">science_fits</span><span class="p">,</span> <span class="n">num_det_px</span><span class="o">=</span><span class="n">num_det_px</span><span class="p">,</span> <span class="n">coron_type</span><span class="o">=</span><span class="n">masktype</span><span class="p">)</span>
+<span class="n">ref_numpy</span><span class="p">,</span> <span class="n">refnoise_numpy</span> <span class="o">=</span> <span class="n">JWSTNIRCamData</span><span class="o">.</span><span class="n">load_and_crop_obs</span><span class="p">(</span><span class="n">reference_fits</span><span class="p">,</span> <span class="n">num_det_px</span><span class="o">=</span><span class="n">num_det_px</span><span class="p">,</span> <span class="n">coron_type</span><span class="o">=</span><span class="n">masktype</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">[</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">])</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">221</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">sci_numpy</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">origin</span><span class="o">=</span><span class="s1">&#39;lower&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;HIP 65426 (science data)&#39;</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">222</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">scinoise_numpy</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">origin</span><span class="o">=</span><span class="s1">&#39;lower&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;HIP 65426 (science noise)&#39;</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">223</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">ref_numpy</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">origin</span><span class="o">=</span><span class="s1">&#39;lower&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;HIP 68245 (reference data)&#39;</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">224</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">refnoise_numpy</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">origin</span><span class="o">=</span><span class="s1">&#39;lower&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;HIP 68245 (reference noise)&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Text(0.5, 1.0, &#39;HIP 68245 (reference noise)&#39;)
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_quickstart_9_1.png" src="../_images/notebooks_quickstart_9_1.png" />
+</div>
+</div>
+<p>The function does a few things: crops the images so that the coronagraph center is as close as possible to the center of the image, mean-combines all the integrations, and adds the noise from all the integrations in quadrature. We crop to a 80x80 sub-window because that is where typical PSF subtraction leaves significant starlight residuals. If the mask and filter combination is not one of the pre-defined options, you must manually provide how to crop the image.</p>
+<p>Since we are doing model-based PSF subtraction, we need to mask out the bad pixels from our image to avoid biasing the optimization. If you ran the normal JWST pipeline, your images may already have NaNs in them, in which case that is a good starting point: you just need to crop it in the same way that we cropped the science and noise arrays. Otherwise, you can create your own pixel mask as long as it matches the shape of the cropped data.</p>
+<p>For convenience, a simple pixel mask is also included in the Google Drive above, so we can start with that.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="n">px_mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s1">&#39;path/to/filen/pixel_mask.npy&#39;</span><span class="p">)</span>
+<span class="n">px_mask</span> <span class="o">=</span> <span class="n">px_mask</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+<span class="n">px_mask_numpy</span> <span class="o">=</span> <span class="n">px_mask</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<p>Finally, we convert this to pyTorch tensors, which we will use for our optimization.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sci</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">sci_numpy</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">DEVICE</span><span class="p">)</span>
+<span class="n">ref</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">ref_numpy</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">DEVICE</span><span class="p">)</span>
+<span class="n">px_mask</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">px_mask</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">DEVICE</span><span class="p">)[</span><span class="kc">None</span><span class="p">]</span> <span class="c1"># Needs to be 3D tensor</span>
+</pre></div>
+</div>
+</div>
+<p>Great, now we can set up our differentiable NIRCam object!</p>
+</section>
+<section id="Setting-up-a-differentiable-NIRCam-object">
+<h2>Setting up a differentiable NIRCam object<a class="headerlink" href="#Setting-up-a-differentiable-NIRCam-object" title="Link to this heading">¶</a></h2>
+<p>For the most common data types, we have convenience functions that assemble differentiable JWST/NIRCam objects from the observations, through STPSF. Here we also choose the oversampling of our image plane and the number of monochromatic wavefronts to create a “broadband” wavefront. Oversample = 2 we have found is decent in most cases. For wide filters we choose num_wl=21 and for medium-band filters usually num_wl=9, but this can be experimented with.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">model_dir</span> <span class="o">=</span> <span class="s1">&#39;data_dir_jan&#39;</span>
+
+<span class="c1"># Create STPSF model (with minor tweaks) from observation</span>
+<span class="n">stpsfmodel</span> <span class="o">=</span> <span class="n">JWSTNIRCamData</span><span class="o">.</span><span class="n">create_STPSF_model</span><span class="p">(</span><span class="n">from_obs</span><span class="o">=</span><span class="n">science_fits</span><span class="p">)</span>
+
+<span class="c1"># Save parameters as required for us</span>
+<span class="n">JWSTNIRCamData</span><span class="o">.</span><span class="n">generate_STPSF_model_params</span><span class="p">(</span><span class="n">stpsfmodel</span><span class="p">,</span><span class="n">spec_type</span><span class="o">=</span><span class="s1">&#39;A1V&#39;</span><span class="p">,</span> <span class="n">catalog_spec</span><span class="o">=</span><span class="s1">&#39;phoenix&#39;</span><span class="p">,</span> <span class="c1"># spectral type of host star; can also be an empirical spectrum; only used to generate the wavelength sampling</span>
+                            <span class="n">num_wl</span><span class="o">=</span><span class="mi">21</span><span class="p">,</span><span class="n">oversample</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+                            <span class="n">folder_to_save</span><span class="o">=</span><span class="n">model_dir</span><span class="p">)</span>
+
+<span class="c1"># Once the two lines above run once, they don&#39;t need to be run again: we can just load the products directly here</span>
+<span class="c1"># to assemble a differentiable NIRCam object</span>
+<span class="n">diffNIRCam</span> <span class="o">=</span> <span class="n">JWSTNIRCamData</span><span class="o">.</span><span class="n">assemble_JWST_NIRCam_coron</span><span class="p">(</span><span class="n">model_dir</span><span class="p">,</span><span class="n">num_det_px</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Since the host star also has properties that we want to fit for (e.g., misalignment relative to the coronagraph), we need a differentiable wavefront object too. Optionally this can be one for the science target and one for the reference target, since they are different stars, but for a first approximation we can use the same one since they are very similar stars:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pyflip.wavefronts</span> <span class="kn">import</span> <span class="n">BroadbandWavefront</span>
+<span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
+
+<span class="c1"># To get the wavelenght-dependent weights estimated by STPSF: this encapsulates the spectrum of the star and the instrument throughput</span>
+<span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">wlen_weights</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">JWSTNIRCamData</span><span class="o">.</span><span class="n">load_model_data</span><span class="p">(</span><span class="n">data_dir</span><span class="o">=</span><span class="n">model_dir</span><span class="p">)</span>
+
+<span class="c1"># Set up the wavefront object: this will be propagated by our optical model</span>
+<span class="n">initial_star_position</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">]))</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">DEVICE</span><span class="p">)</span> <span class="c1"># Relative to coronagraph center</span>
+<span class="n">wavefronts</span> <span class="o">=</span> <span class="n">BroadbandWavefront</span><span class="p">(</span><span class="n">wlen_weights</span><span class="p">,</span> <span class="n">angles</span><span class="o">=</span><span class="n">initial_star_position</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">DEVICE</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Good! Now we can move on to setting up our actual optimization.</p>
+</section>
+<section id="Optimization-setup">
+<h2>Optimization setup<a class="headerlink" href="#Optimization-setup" title="Link to this heading">¶</a></h2>
+<p>We need to set up a few things: the parameters we want to fit in our model and their associated learning rates, the optimizer to use, the learning rate scheduler to use (e.g., slow down the optimization towards the end), the science scale down factor (how much to scale down the gradient when optimizing on the science target relative to the reference target, to make it “less aggressive” and thus less prone to overfitting), and the iteration numbers that define the FLIP stages.</p>
+<p>Below are some default choices that work decently for this dataset; see our paper for details (and upcoming tutorials on fine-tuning).</p>
+<p>First: we are fitting the star position, the OPD (phase error) at the entrance of the telescope, the internal OPD after the coronagraph mask, and detector flat fields. These can be called from the differentiable NIRCam object we created above.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Star parameters</span>
+
+<span class="n">star_position</span> <span class="o">=</span> <span class="p">[</span><span class="n">wavefronts</span><span class="o">.</span><span class="n">angles_offset</span><span class="p">]</span>
+
+<span class="c1"># Instrument parameters</span>
+<span class="n">opds</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">diffNIRCam</span><span class="o">.</span><span class="n">optical_system</span><span class="o">.</span><span class="n">JWSTPrimary</span><span class="o">.</span><span class="n">wfe_offsets</span><span class="o">.</span><span class="n">grid</span><span class="p">,</span>
+    <span class="n">diffNIRCam</span><span class="o">.</span><span class="n">optical_system</span><span class="o">.</span><span class="n">NIRCamLyotstop</span><span class="o">.</span><span class="n">wfe_offsets</span><span class="o">.</span><span class="n">grid</span>
+<span class="p">]</span>
+
+<span class="n">detector_flats</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">diffNIRCam</span><span class="o">.</span><span class="n">optical_system</span><span class="o">.</span><span class="n">NIRCamdetector</span><span class="o">.</span><span class="n">detector_flat_field</span><span class="o">.</span><span class="n">grid</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<p>Now we set up the optimizer:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">scheduler_iters</span> <span class="o">=</span> <span class="mi">15000</span>
+<span class="n">stage_cutoffs</span> <span class="o">=</span> <span class="p">[</span><span class="mi">600</span><span class="p">,</span> <span class="mi">3500</span><span class="p">,</span> <span class="mi">5500</span><span class="p">,</span> <span class="mi">5500</span><span class="o">+</span><span class="mi">600</span><span class="p">,</span> <span class="mi">11000</span><span class="p">]</span>
+<span class="n">sci_loss_weight</span> <span class="o">=</span> <span class="mf">0.00005</span>
+
+<span class="n">optimizer_argument</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">{</span><span class="s1">&#39;params&#39;</span><span class="p">:</span> <span class="n">opds</span><span class="p">,</span> <span class="s1">&#39;lr&#39;</span><span class="p">:</span> <span class="mf">4e-9</span><span class="p">},</span>
+        <span class="p">{</span><span class="s1">&#39;params&#39;</span><span class="p">:</span> <span class="n">star_position</span><span class="p">,</span> <span class="s1">&#39;lr&#39;</span><span class="p">:</span> <span class="mf">4e-8</span><span class="p">},</span>
+        <span class="p">{</span><span class="s1">&#39;params&#39;</span><span class="p">:</span> <span class="n">detector_flats</span><span class="p">,</span> <span class="s1">&#39;lr&#39;</span><span class="p">:</span><span class="mf">4e-5</span><span class="p">}</span>
+    <span class="p">]</span>
+
+<span class="n">optimizer</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">AdamW</span><span class="p">(</span><span class="n">optimizer_argument</span><span class="p">,</span> <span class="n">weight_decay</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+
+<span class="n">scheduler</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">lr_scheduler</span><span class="o">.</span><span class="n">CosineAnnealingLR</span><span class="p">(</span><span class="n">optimizer</span><span class="p">,</span> <span class="n">T_max</span><span class="o">=</span><span class="n">scheduler_iters</span><span class="p">,</span> <span class="n">eta_min</span><span class="o">=</span><span class="mf">4e-9</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>To actually apply the optimization stages, we have a convenience function to apply the different optimization stages given stage numbers. These are very simple and customizable; we will use the default one we used for the paper.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pyflip.optimization_handlers</span> <span class="kn">import</span> <span class="n">default_stages</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Run-FLIP">
+<h2>Run FLIP<a class="headerlink" href="#Run-FLIP" title="Link to this heading">¶</a></h2>
+<p>Now we can actually run FLIP! We set up a standard optimization loop. Each round will do the following things:</p>
+<ul class="simple">
+<li><p>Re-start the optimizer</p></li>
+<li><p>Forward model a PSF with the current model parameters.</p></li>
+<li><p>Compute the difference (the L1 loss) between the data and the model PSF. For stage 1 iterations the data is the reference target; for stage 2 it is our science target.</p></li>
+<li><p>Mask out bad pixels using our pixel mask. This prevents them from contributing to the loss function.</p></li>
+<li><p>Propagate loss function and populate parameter gradients.</p></li>
+<li><p>During stages 1.1 and 2.1, match the model PSF flux to the target flux (currently this is done manually for simplicity; in future releases of the code this will be a differentiable parameter as well)</p></li>
+<li><p>Apply the optimization stages (e.g., zero-out the gradients of parameters we don’t want to update at a given stage).</p></li>
+<li><p>Update parameters</p></li>
+<li><p>At some iterations, track and measure diagnostics (e.g., model parameter evolution, loss function vs iteration number, SNR of real or injected planets, etc).</p></li>
+</ul>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">tqdm</span>
+<span class="kn">import</span> <span class="nn">torch.nn.functional</span> <span class="k">as</span> <span class="nn">F</span>
+<span class="kn">from</span> <span class="nn">pyflip.dl_utils</span> <span class="kn">import</span> <span class="n">manual_match_flux</span><span class="p">,</span> <span class="n">track_SNR</span> <span class="c1"># Manual flux match, tracking SNR utils</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">tbar</span> <span class="o">=</span> <span class="n">tqdm</span><span class="o">.</span><span class="n">tqdm</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">stage_cutoffs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span> <span class="n">mininterval</span><span class="o">=</span><span class="mf">30.0</span><span class="p">)</span> <span class="c1"># Progress bar to end of final stage</span>
+
+<span class="n">save_loss_every</span> <span class="o">=</span> <span class="mi">400</span> <span class="c1"># Measure loss every 400 iterations</span>
+<span class="n">measure_SNR_every</span> <span class="o">=</span> <span class="mi">400</span> <span class="c1"># Measure SNR every 400 iterations</span>
+
+<span class="n">losses</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">loss_iters</span> <span class="o">=</span> <span class="p">[]</span>
+
+<span class="n">snrs_arr</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">track_SNR_iters</span> <span class="o">=</span> <span class="p">[]</span>
+
+<span class="n">outout_dir</span> <span class="o">=</span> <span class="s1">&#39;output&#39;</span>
+
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">tbar</span><span class="p">:</span>
+
+    <span class="n">optimizer</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">(</span><span class="n">set_to_none</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># Model new PSF</span>
+    <span class="n">PSF_model</span> <span class="o">=</span> <span class="n">diffNIRCam</span><span class="p">(</span><span class="n">wavefronts</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">stage_cutoffs</span><span class="p">[</span><span class="mi">2</span><span class="p">]:</span> <span class="c1"># Before this iteration we are in stage 1: calibration on reference star</span>
+        <span class="n">loss</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">smooth_l1_loss</span><span class="p">(</span><span class="n">PSF_model</span><span class="p">,</span> <span class="n">ref</span><span class="p">,</span> <span class="n">reduction</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">)</span> <span class="c1"># Reduction = none to keep the array shape and mask loss pixels</span>
+    <span class="k">else</span><span class="p">:</span>  <span class="c1"># Then we are in stage 2: tuning on science star</span>
+        <span class="n">loss</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">l1_loss</span><span class="p">(</span><span class="n">PSF_model</span><span class="p">,</span> <span class="n">sci</span><span class="p">,</span> <span class="n">reduction</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">)</span> <span class="o">*</span> <span class="n">sci_loss_weight</span> <span class="c1"># Scale down gradient to make optimization less &quot;aggressive&quot; on science target</span>
+
+    <span class="n">loss</span> <span class="o">*=</span> <span class="n">px_mask</span>
+    <span class="n">loss</span> <span class="o">=</span> <span class="n">loss</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">/</span> <span class="n">px_mask</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+    <span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span> <span class="c1"># Populate gradients</span>
+
+    <span class="k">if</span> <span class="n">i</span><span class="o">%</span><span class="k">save_loss_every</span>==0:
+        <span class="n">losses</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">loss</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+        <span class="n">loss_iters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+
+    <span class="c1"># Match flux</span>
+    <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">stage_cutoffs</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+        <span class="n">wavefronts</span> <span class="o">=</span> <span class="n">manual_match_flux</span><span class="p">(</span><span class="n">PSF_model</span><span class="p">,</span> <span class="n">ref</span><span class="p">,</span> <span class="n">px_mask</span><span class="p">,</span> <span class="n">wavefronts</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="n">stage_cutoffs</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="ow">and</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">stage_cutoffs</span><span class="p">[</span><span class="mi">3</span><span class="p">]:</span>
+        <span class="n">wavefronts</span> <span class="o">=</span> <span class="n">manual_match_flux</span><span class="p">(</span><span class="n">PSF_model</span><span class="p">,</span> <span class="n">sci</span><span class="p">,</span> <span class="n">px_mask</span><span class="p">,</span> <span class="n">wavefronts</span><span class="p">)</span>
+
+    <span class="c1"># Apply stages: prevent update of some parameters</span>
+    <span class="n">default_stages</span><span class="p">(</span><span class="n">diffNIRCam</span><span class="p">,</span> <span class="n">wavefronts</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">stage_cutoffs</span> <span class="o">=</span> <span class="n">stage_cutoffs</span><span class="p">)</span>
+
+    <span class="c1"># Update parameters</span>
+    <span class="n">optimizer</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+    <span class="n">scheduler</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+
+    <span class="c1"># Below is optional: track some metrics</span>
+    <span class="c1"># Detaching from the optimization can significantly increase the runtime of the loop;</span>
+    <span class="c1"># so only run the components below as much as necessary for inspection etc.</span>
+
+    <span class="c1"># Optional: End of calibration! Save final reference PSF and residual</span>
+    <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="n">stage_cutoffs</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span> <span class="c1"># Prevent gradient computation since this is just a metric</span>
+            <span class="n">residual_ref</span> <span class="o">=</span> <span class="n">ref</span> <span class="o">-</span> <span class="n">PSF_model</span>
+            <span class="n">residual_ref</span> <span class="o">=</span> <span class="n">residual_ref</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+            <span class="n">model_psf_ref</span> <span class="o">=</span> <span class="n">PSF_model</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+
+            <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">outout_dir</span><span class="o">+</span><span class="s1">&#39;/residual_ref_jan.npy&#39;</span><span class="p">,</span> <span class="n">residual_ref</span><span class="p">)</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">outout_dir</span><span class="o">+</span><span class="s1">&#39;/model_psf_ref_jan.npy&#39;</span><span class="p">,</span> <span class="n">model_psf_ref</span><span class="p">)</span>
+
+    <span class="c1"># Optional: Track SNR of real planet (known location in detector coordinates) or injected planets.</span>
+    <span class="k">if</span> <span class="n">i</span><span class="o">%</span><span class="k">measure_SNR_every</span> == 0 and i &gt; stage_cutoffs[2]: # only measure in science target
+        <span class="n">residual_sci</span> <span class="o">=</span> <span class="n">sci</span> <span class="o">-</span> <span class="n">PSF_model</span>
+        <span class="n">residual_sci</span> <span class="o">=</span> <span class="n">residual_sci</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+        <span class="c1"># To track SNR we need: location of source (in pixels, in detector coordinates),</span>
+        <span class="c1"># aperture size (radius of circle in pixels enclosing the planet PSF),</span>
+        <span class="c1"># and annulus width (in pixels, over which to compute noise samples for SNR calculation)</span>
+        <span class="c1"># If the planet peak flux is known, we can also compute signal loss.</span>
+
+        <span class="c1"># Optionally: smooth the image with a Gaussian kernel to remove pixel-to-pixel noise in SNR calculation</span>
+
+        <span class="c1"># This assumes that the coronagraph center is quite close to the detector center, and that</span>
+        <span class="c1"># the star is quite close to the center of the coronagraph. TODO: re-center to star first and then</span>
+        <span class="c1"># compute these metrics relative to star.</span>
+
+        <span class="c1"># HIP 65426 b takes up a lot of the image; so to track the SNR properly we set a</span>
+        <span class="c1"># big aperture size (22 pixels) and a big annulus width (6.5 pixels).</span>
+        <span class="c1"># For more &quot;normal&quot; sources, app_size and ann_width of 3-5 pixels should work,</span>
+        <span class="c1"># depending on whether we just see the PSF core (lambda/D) or more of it.</span>
+        <span class="n">signal_peaks</span><span class="p">,</span> <span class="n">signal_losses</span><span class="p">,</span> <span class="n">snrs</span> <span class="o">=</span> <span class="n">track_SNR</span><span class="p">(</span><span class="n">residual_sci</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="p">[{</span><span class="s1">&#39;pos_x_px&#39;</span><span class="p">:</span><span class="o">-</span><span class="mf">8.</span><span class="p">,</span> <span class="s1">&#39;pos_y_px&#39;</span><span class="p">:</span> <span class="mf">11.</span><span class="p">}],</span><span class="n">app_size</span><span class="o">=</span><span class="mf">22.</span><span class="p">,</span> <span class="n">ann_width</span><span class="o">=</span><span class="mf">8.</span><span class="p">,</span>
+                                                      <span class="n">track_fluxes</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span><span class="n">mask_name</span><span class="o">=</span><span class="s1">&#39;MASK335R&#39;</span><span class="p">,</span> <span class="n">snr_smooth_sigma</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span> <span class="n">px_mask_numpy</span><span class="o">=</span><span class="n">px_mask_numpy</span><span class="p">,</span>
+                                                      <span class="n">vis_dir_iterations</span><span class="o">=</span><span class="n">outout_dir</span><span class="o">+</span><span class="s1">&#39;/vis_iters&#39;</span><span class="p">)</span>
+        <span class="n">snrs_arr</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">snrs</span><span class="p">)</span>
+        <span class="n">track_SNR_iters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+
+    <span class="c1"># Optional: End! Save final residual, loss vs iterations, and maybe even final model parameters</span>
+    <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="n">stage_cutoffs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
+        <span class="n">residual_sci</span> <span class="o">=</span> <span class="n">sci</span> <span class="o">-</span> <span class="n">PSF_model</span>
+        <span class="n">residual_sci</span> <span class="o">=</span> <span class="n">residual_sci</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">outout_dir</span><span class="o">+</span><span class="s1">&#39;/residual_sci.npy&#39;</span><span class="p">,</span> <span class="n">residual_sci</span><span class="p">)</span>
+
+        <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">outout_dir</span><span class="o">+</span><span class="s1">&#39;/loss.npy&#39;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">losses</span><span class="p">))</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">outout_dir</span><span class="o">+</span><span class="s1">&#39;/loss_iters.npy&#39;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">loss_iters</span><span class="p">))</span>
+
+        <span class="c1"># Example of how to save model parameters at any point</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">outout_dir</span><span class="o">+</span><span class="s1">&#39;/postmask_OPD.npy&#39;</span><span class="p">,</span> <span class="n">diffNIRCam</span><span class="o">.</span><span class="n">optical_system</span><span class="o">.</span><span class="n">NIRCamLyotstop</span><span class="o">.</span><span class="n">wfe_offsets</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">())</span>
+
+        <span class="c1"># Save SNR diagnostics</span>
+        <span class="n">snrs_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">snrs_arr</span><span class="p">)</span>
+        <span class="n">track_SNR_iters</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">track_SNR_iters</span><span class="p">)</span>
+
+        <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">outout_dir</span><span class="o">+</span><span class="s1">&#39;/snrs_arr.npy&#39;</span><span class="p">,</span> <span class="n">snrs_arr</span><span class="p">)</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">outout_dir</span><span class="o">+</span><span class="s1">&#39;/track_snr_iters.npy&#39;</span><span class="p">,</span> <span class="n">track_SNR_iters</span><span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+<p>And that’s a-FLIP.</p>
+</section>
+<section id="Visualize-results">
+<h2>Visualize results<a class="headerlink" href="#Visualize-results" title="Link to this heading">¶</a></h2>
+<p>We can look at our results now; for example, the evolution in the loss function and the final residual science images.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">loss_vals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">outout_dir</span><span class="o">+</span><span class="s1">&#39;/loss.npy&#39;</span><span class="p">)</span>
+<span class="n">loss_iters</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">outout_dir</span><span class="o">+</span><span class="s1">&#39;/loss_iters.npy&#39;</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">loss_iters</span><span class="p">,</span> <span class="n">loss_vals</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Iteration number&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Loss&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">yscale</span><span class="p">(</span><span class="s1">&#39;log&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_quickstart_38_0.png" src="../_images/notebooks_quickstart_38_0.png" />
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">res_science</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s1">&#39;path/to/file/residual_sci0.npy&#39;</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">res_science</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">origin</span><span class="o">=</span><span class="s1">&#39;lower&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&lt;matplotlib.colorbar.Colorbar at 0x7f3147b7b690&gt;
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_quickstart_39_1.png" src="../_images/notebooks_quickstart_39_1.png" />
+</div>
+</div>
+<p>And there’s HIP 65426 b!</p>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="../api/modules.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">pyflip</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="../installation.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Installation</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2026, Rodrigo Ferrer-Chavez
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Quickstart: basic tutorial</a><ul>
+<li><a class="reference internal" href="#Loading-data">Loading data</a></li>
+<li><a class="reference internal" href="#Setting-up-a-differentiable-NIRCam-object">Setting up a differentiable NIRCam object</a></li>
+<li><a class="reference internal" href="#Optimization-setup">Optimization setup</a></li>
+<li><a class="reference internal" href="#Run-FLIP">Run FLIP</a></li>
+<li><a class="reference internal" href="#Visualize-results">Visualize results</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="../_static/documentation_options.js?v=d45e8c67"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
+    </body>
+</html>
